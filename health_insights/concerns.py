@@ -90,7 +90,7 @@ def evaluate(
                     title="A health check failed to run",
                     evidence=f"rule '{name}' failed ({exc_type})",
                     source="internal",
-                    advice="This check did not run; the rest of the report is unaffected. Tell Claude.",
+                    advice="This check did not run; the rest of the report is unaffected. Rerun the job or check its log.",
                 )
             )
 

@@ -8,4 +8,4 @@ freshness, and emits stable JSON (schema v1) plus a short Markdown report.
 Not medical advice. Aggregates only.
 """
 
-__version__ = "1.37.0"
+__version__ = "1.37.1"

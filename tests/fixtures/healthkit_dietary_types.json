@@ -1,5 +1,5 @@
 {
- "source": "HealthKit HKQuantityTypeIdentifier dietary list; canonical units follow config/dri.yaml where a DRI exists (Claude-written 2026-09-26, no health data)",
+ "source": "HealthKit HKQuantityTypeIdentifier dietary list; canonical units follow config/dri.yaml where a DRI exists (written 2026-09-26, no health data)",
  "types": [
   {
    "type_code": "dietary_energy_consumed",
