@@ -1,0 +1,90 @@
+# health_monitor.yaml
+# Health metrics baseline windows and anomaly thresholds.
+# Timezone: set in ~/.config/health-insights/config.yaml (all day boundaries use that local calendar date).
+# Metrics keyed by canonical bridge type_code (see health_insights/health_types.py).
+# Health data stays local; this file holds no values, only thresholds.
+# Default rolling window used when a metric has no explicit baseline.
+default_window_days: 30
+# Minimum distinct local days of history before a metric is trusted.
+min_history_days: 14
+
+metrics:
+  resting_heart_rate:
+    unit: bpm
+    baseline_window_days: 30
+    anomaly:
+      # Flag a day whose value deviates from the baseline median by more than
+      # this many robust-sigma (MAD-based) units, or beyond these absolute bounds.
+      robust_sigma: 3.0
+      min_abs: 45
+      max_abs: 120
+    trend:
+      # Alert if the 30-day trend slope changes by more than this per day.
+      slope_per_day_alert: 0.5
+
+  sleep_analysis:
+    # Daily value = sum of sleep_sessions durations for that local night.
+    # (The bridge stores no sleep "quality score"; sleep hours is the proxy.)
+    aggregate: sleep_hours
+    unit: hours
+    baseline_window_days: 30
+    anomaly:
+      robust_sigma: 3.0
+      min_abs: 0
+      max_abs: 24
+    trend:
+      slope_per_day_alert: 1.0
+
+  weight:
+    unit: kg
+    baseline_window_days: 30
+    anomaly:
+      robust_sigma: 3.0
+      # A >2 kg change over 3 days is flagged (fluid/illness indicator).
+      max_change_over_days: 2
+      window_days: 3
+      min_abs: 30
+      max_abs: 400
+    trend:
+      slope_per_day_alert: 0.2
+
+  heart_rate:
+    unit: bpm
+    baseline_window_days: 30
+    anomaly:
+      robust_sigma: 3.0
+      min_abs: 30
+      max_abs: 220
+    trend:
+      slope_per_day_alert: 0.5
+
+  heart_rate_variability_sdnn:
+    unit: ms
+    baseline_window_days: 30
+    anomaly:
+      robust_sigma: 3.0
+      min_abs: 5
+      max_abs: 250
+    trend:
+      slope_per_day_alert: 2.0
+
+  # SpO2 (oxygen_saturation): Apple stores the value as a fraction (e.g. 0.97).
+  # The digest renders it as a percent (97 %). Absolute bounds are left to the user,
+  # so this metric uses robust_sigma only — no min_abs/max_abs.
+  oxygen_saturation:
+    unit: "%"
+    baseline_window_days: 30
+    anomaly:
+      robust_sigma: 3.0
+    trend:
+      slope_per_day_alert: 1.0
+
+# How to surface an anomaly. Delivery mechanism is host-config dependent;
+# this file only declares intent.
+alerts:
+  channel: none
+  rate_limit_per_day: 10
+  quiet_hours:
+    start: "22:00"
+    end: "06:00"
+    timezone: local

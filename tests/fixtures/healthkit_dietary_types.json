@@ -1,0 +1,239 @@
+{
+ "source": "HealthKit HKQuantityTypeIdentifier dietary list; canonical units follow config/dri.yaml where a DRI exists (Claude-written 2026-09-26, no health data)",
+ "types": [
+  {
+   "type_code": "dietary_energy_consumed",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryEnergyConsumed",
+   "canonical_unit": "kcal",
+   "dri_key": null
+  },
+  {
+   "type_code": "dietary_fat_total",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryFatTotal",
+   "canonical_unit": "g",
+   "dri_key": "fat_total"
+  },
+  {
+   "type_code": "dietary_fat_polyunsaturated",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryFatPolyunsaturated",
+   "canonical_unit": "g",
+   "dri_key": "fat_polyunsaturated"
+  },
+  {
+   "type_code": "dietary_fat_monounsaturated",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryFatMonounsaturated",
+   "canonical_unit": "g",
+   "dri_key": "fat_monounsaturated"
+  },
+  {
+   "type_code": "dietary_fat_saturated",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryFatSaturated",
+   "canonical_unit": "g",
+   "dri_key": "fat_saturated"
+  },
+  {
+   "type_code": "dietary_cholesterol",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryCholesterol",
+   "canonical_unit": "mg",
+   "dri_key": "cholesterol"
+  },
+  {
+   "type_code": "dietary_carbohydrates",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryCarbohydrates",
+   "canonical_unit": "g",
+   "dri_key": "carbohydrates"
+  },
+  {
+   "type_code": "dietary_fiber",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryFiber",
+   "canonical_unit": "g",
+   "dri_key": "fiber"
+  },
+  {
+   "type_code": "dietary_sugar",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietarySugar",
+   "canonical_unit": "g",
+   "dri_key": "sugar"
+  },
+  {
+   "type_code": "dietary_sodium",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietarySodium",
+   "canonical_unit": "mg",
+   "dri_key": "sodium"
+  },
+  {
+   "type_code": "dietary_protein",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryProtein",
+   "canonical_unit": "g",
+   "dri_key": "protein"
+  },
+  {
+   "type_code": "dietary_calcium",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryCalcium",
+   "canonical_unit": "mg",
+   "dri_key": "calcium"
+  },
+  {
+   "type_code": "dietary_iron",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryIron",
+   "canonical_unit": "mg",
+   "dri_key": "iron"
+  },
+  {
+   "type_code": "dietary_potassium",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryPotassium",
+   "canonical_unit": "mg",
+   "dri_key": "potassium"
+  },
+  {
+   "type_code": "dietary_vitamin_a",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryVitaminA",
+   "canonical_unit": "mcg",
+   "dri_key": "vitamin_a"
+  },
+  {
+   "type_code": "dietary_vitamin_b6",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryVitaminB6",
+   "canonical_unit": "mg",
+   "dri_key": "vitamin_b6"
+  },
+  {
+   "type_code": "dietary_vitamin_b12",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryVitaminB12",
+   "canonical_unit": "mcg",
+   "dri_key": "vitamin_b12"
+  },
+  {
+   "type_code": "dietary_vitamin_c",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryVitaminC",
+   "canonical_unit": "mg",
+   "dri_key": "vitamin_c"
+  },
+  {
+   "type_code": "dietary_vitamin_d",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryVitaminD",
+   "canonical_unit": "mcg",
+   "dri_key": "vitamin_d"
+  },
+  {
+   "type_code": "dietary_vitamin_e",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryVitaminE",
+   "canonical_unit": "mg",
+   "dri_key": "vitamin_e"
+  },
+  {
+   "type_code": "dietary_vitamin_k",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryVitaminK",
+   "canonical_unit": "mcg",
+   "dri_key": "vitamin_k"
+  },
+  {
+   "type_code": "dietary_thiamin",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryThiamin",
+   "canonical_unit": "mg",
+   "dri_key": "thiamin"
+  },
+  {
+   "type_code": "dietary_riboflavin",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryRiboflavin",
+   "canonical_unit": "mg",
+   "dri_key": "riboflavin"
+  },
+  {
+   "type_code": "dietary_niacin",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryNiacin",
+   "canonical_unit": "mg",
+   "dri_key": "niacin"
+  },
+  {
+   "type_code": "dietary_folate",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryFolate",
+   "canonical_unit": "mcg",
+   "dri_key": "folate"
+  },
+  {
+   "type_code": "dietary_biotin",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryBiotin",
+   "canonical_unit": "mcg",
+   "dri_key": "biotin"
+  },
+  {
+   "type_code": "dietary_pantothenic_acid",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryPantothenicAcid",
+   "canonical_unit": "mg",
+   "dri_key": "pantothenic_acid"
+  },
+  {
+   "type_code": "dietary_phosphorus",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryPhosphorus",
+   "canonical_unit": "mg",
+   "dri_key": "phosphorus"
+  },
+  {
+   "type_code": "dietary_iodine",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryIodine",
+   "canonical_unit": "mcg",
+   "dri_key": "iodine"
+  },
+  {
+   "type_code": "dietary_magnesium",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryMagnesium",
+   "canonical_unit": "mg",
+   "dri_key": "magnesium"
+  },
+  {
+   "type_code": "dietary_zinc",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryZinc",
+   "canonical_unit": "mg",
+   "dri_key": "zinc"
+  },
+  {
+   "type_code": "dietary_selenium",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietarySelenium",
+   "canonical_unit": "mcg",
+   "dri_key": "selenium"
+  },
+  {
+   "type_code": "dietary_copper",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryCopper",
+   "canonical_unit": "mcg",
+   "dri_key": "copper"
+  },
+  {
+   "type_code": "dietary_manganese",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryManganese",
+   "canonical_unit": "mg",
+   "dri_key": "manganese"
+  },
+  {
+   "type_code": "dietary_chromium",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryChromium",
+   "canonical_unit": "mcg",
+   "dri_key": "chromium"
+  },
+  {
+   "type_code": "dietary_molybdenum",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryMolybdenum",
+   "canonical_unit": "mcg",
+   "dri_key": "molybdenum"
+  },
+  {
+   "type_code": "dietary_chloride",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryChloride",
+   "canonical_unit": "mg",
+   "dri_key": null
+  },
+  {
+   "type_code": "dietary_caffeine",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryCaffeine",
+   "canonical_unit": "mg",
+   "dri_key": null
+  },
+  {
+   "type_code": "dietary_water",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryWater",
+   "canonical_unit": "mL",
+   "dri_key": "water"
+  }
+ ]
+}

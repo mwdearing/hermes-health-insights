@@ -1,0 +1,794 @@
+{
+ "source": "roian6/apple-health-ai-bridge @ 69f3755 (Apache-2.0): src/health_bridge/timeseries_catalog.py + ios HealthKitTypeCatalog.swift",
+ "requested_read_types": [
+  "atrial_fibrillation_burden",
+  "basal_energy",
+  "blood_alcohol_content",
+  "blood_glucose",
+  "blood_pressure_diastolic",
+  "blood_pressure_systolic",
+  "body_fat_percentage",
+  "body_mass_index",
+  "body_temperature",
+  "distance_cycling",
+  "distance_downhill_snow_sports",
+  "distance_swimming",
+  "distance_walking_running",
+  "electrodermal_activity",
+  "energy",
+  "environmental_audio_exposure",
+  "estimated_workout_effort_score",
+  "exercise_time",
+  "flights_climbed",
+  "forced_expiratory_volume_1",
+  "forced_vital_capacity",
+  "headphone_audio_exposure",
+  "heart_rate",
+  "heart_rate_recovery_one_minute",
+  "heart_rate_variability_sdnn",
+  "height",
+  "hydration",
+  "inhaler_usage",
+  "insulin_delivery",
+  "lean_body_mass",
+  "nike_fuel",
+  "number_of_alcoholic_beverages",
+  "number_of_times_fallen",
+  "oxygen_saturation",
+  "peak_expiratory_flow_rate",
+  "peripheral_perfusion_index",
+  "physical_effort",
+  "push_count",
+  "respiratory_rate",
+  "resting_heart_rate",
+  "running_ground_contact_time",
+  "running_power",
+  "running_speed",
+  "running_stride_length",
+  "running_vertical_oscillation",
+  "six_minute_walk_test_distance",
+  "skin_temperature",
+  "sleep_analysis",
+  "sleeping_breathing_disturbances",
+  "stair_ascent_speed",
+  "stair_descent_speed",
+  "stand_time",
+  "steps",
+  "swimming_stroke_count",
+  "underwater_depth",
+  "uv_exposure",
+  "vo2_max",
+  "waist_circumference",
+  "walking_asymmetry_percentage",
+  "walking_double_support_percentage",
+  "walking_heart_rate_average",
+  "walking_speed",
+  "walking_steadiness",
+  "walking_step_length",
+  "weight",
+  "workout",
+  "workout_effort_score"
+ ],
+ "types": [
+  {
+   "type_code": "heart_rate",
+   "unit": "bpm",
+   "category": "heart",
+   "aggregation": "min_max_average",
+   "description": "Heart rate",
+   "healthkit_identifier": "HKQuantityTypeIdentifierHeartRate",
+   "display_name": "Heart Rate"
+  },
+  {
+   "type_code": "resting_heart_rate",
+   "unit": "bpm",
+   "category": "heart",
+   "aggregation": "min_max_average",
+   "description": "Resting heart rate",
+   "healthkit_identifier": "HKQuantityTypeIdentifierRestingHeartRate",
+   "display_name": "Resting Heart Rate"
+  },
+  {
+   "type_code": "heart_rate_variability_sdnn",
+   "unit": "ms",
+   "category": "heart",
+   "aggregation": "min_max_average",
+   "description": "HRV (SDNN method)",
+   "healthkit_identifier": "HKQuantityTypeIdentifierHeartRateVariabilitySDNN",
+   "display_name": "Heart Rate Variability SDNN"
+  },
+  {
+   "type_code": "heart_rate_variability_rmssd",
+   "unit": "ms",
+   "category": "heart",
+   "aggregation": "min_max_average",
+   "description": "HRV (RMSSD method)",
+   "healthkit_identifier": null,
+   "display_name": null
+  },
+  {
+   "type_code": "heart_rate_recovery_one_minute",
+   "unit": "count/min",
+   "category": "heart",
+   "aggregation": "min_max_average",
+   "description": "HR recovery after 1 minute",
+   "healthkit_identifier": "HKQuantityTypeIdentifierHeartRateRecoveryOneMinute",
+   "display_name": "Heart Rate Recovery One Minute"
+  },
+  {
+   "type_code": "walking_heart_rate_average",
+   "unit": "count/min",
+   "category": "heart",
+   "aggregation": "min_max_average",
+   "description": "Average HR while walking",
+   "healthkit_identifier": "HKQuantityTypeIdentifierWalkingHeartRateAverage",
+   "display_name": "Walking Heart Rate Average"
+  },
+  {
+   "type_code": "recovery_score",
+   "unit": "score",
+   "category": "heart",
+   "aggregation": "latest",
+   "description": "Recovery score",
+   "healthkit_identifier": null,
+   "display_name": null
+  },
+  {
+   "type_code": "oxygen_saturation",
+   "unit": "%",
+   "category": "blood_respiratory",
+   "aggregation": "min_max_average",
+   "description": "SpO2 blood oxygen",
+   "healthkit_identifier": "HKQuantityTypeIdentifierOxygenSaturation",
+   "display_name": "Oxygen Saturation"
+  },
+  {
+   "type_code": "blood_glucose",
+   "unit": "mg/dL",
+   "category": "blood_respiratory",
+   "aggregation": "min_max_average",
+   "description": "Blood glucose level",
+   "healthkit_identifier": "HKQuantityTypeIdentifierBloodGlucose",
+   "display_name": "Blood Glucose"
+  },
+  {
+   "type_code": "blood_pressure_systolic",
+   "unit": "mmHg",
+   "category": "blood_respiratory",
+   "aggregation": "min_max_average",
+   "description": "Systolic blood pressure",
+   "healthkit_identifier": "HKQuantityTypeIdentifierBloodPressureSystolic",
+   "display_name": "Blood Pressure Systolic"
+  },
+  {
+   "type_code": "blood_pressure_diastolic",
+   "unit": "mmHg",
+   "category": "blood_respiratory",
+   "aggregation": "min_max_average",
+   "description": "Diastolic blood pressure",
+   "healthkit_identifier": "HKQuantityTypeIdentifierBloodPressureDiastolic",
+   "display_name": "Blood Pressure Diastolic"
+  },
+  {
+   "type_code": "respiratory_rate",
+   "unit": "brpm",
+   "category": "blood_respiratory",
+   "aggregation": "min_max_average",
+   "description": "Breathing rate",
+   "healthkit_identifier": "HKQuantityTypeIdentifierRespiratoryRate",
+   "display_name": "Respiratory Rate"
+  },
+  {
+   "type_code": "sleeping_breathing_disturbances",
+   "unit": "count",
+   "category": "blood_respiratory",
+   "aggregation": "sum",
+   "description": "Sleep breathing disturbances",
+   "healthkit_identifier": "HKQuantityTypeIdentifierAppleSleepingBreathingDisturbances",
+   "display_name": "Sleeping Breathing Disturbances"
+  },
+  {
+   "type_code": "blood_alcohol_content",
+   "unit": "%",
+   "category": "blood_respiratory",
+   "aggregation": "min_max_average",
+   "description": "Blood alcohol content",
+   "healthkit_identifier": "HKQuantityTypeIdentifierBloodAlcoholContent",
+   "display_name": "Blood Alcohol Content"
+  },
+  {
+   "type_code": "peripheral_perfusion_index",
+   "unit": "%",
+   "category": "blood_respiratory",
+   "aggregation": "min_max_average",
+   "description": "Peripheral perfusion index",
+   "healthkit_identifier": "HKQuantityTypeIdentifierPeripheralPerfusionIndex",
+   "display_name": "Peripheral Perfusion Index"
+  },
+  {
+   "type_code": "forced_vital_capacity",
+   "unit": "liters",
+   "category": "blood_respiratory",
+   "aggregation": "latest",
+   "description": "Forced vital capacity",
+   "healthkit_identifier": "HKQuantityTypeIdentifierForcedVitalCapacity",
+   "display_name": "Forced Vital Capacity"
+  },
+  {
+   "type_code": "forced_expiratory_volume_1",
+   "unit": "liters",
+   "category": "blood_respiratory",
+   "aggregation": "latest",
+   "description": "Forced expiratory volume (1s)",
+   "healthkit_identifier": "HKQuantityTypeIdentifierForcedExpiratoryVolume1",
+   "display_name": "Forced Expiratory Volume 1"
+  },
+  {
+   "type_code": "peak_expiratory_flow_rate",
+   "unit": "L/min",
+   "category": "blood_respiratory",
+   "aggregation": "latest",
+   "description": "Peak expiratory flow rate",
+   "healthkit_identifier": "HKQuantityTypeIdentifierPeakExpiratoryFlowRate",
+   "display_name": "Peak Expiratory Flow Rate"
+  },
+  {
+   "type_code": "height",
+   "unit": "cm",
+   "category": "body",
+   "aggregation": "latest",
+   "description": "Height",
+   "healthkit_identifier": "HKQuantityTypeIdentifierHeight",
+   "display_name": "Height"
+  },
+  {
+   "type_code": "weight",
+   "unit": "kg",
+   "category": "body",
+   "aggregation": "latest",
+   "description": "Weight",
+   "healthkit_identifier": "HKQuantityTypeIdentifierBodyMass",
+   "display_name": "Weight"
+  },
+  {
+   "type_code": "body_fat_percentage",
+   "unit": "%",
+   "category": "body",
+   "aggregation": "latest",
+   "description": "Body fat percentage",
+   "healthkit_identifier": "HKQuantityTypeIdentifierBodyFatPercentage",
+   "display_name": "Body Fat Percentage"
+  },
+  {
+   "type_code": "body_mass_index",
+   "unit": "kg/m\u00b2",
+   "category": "body",
+   "aggregation": "latest",
+   "description": "BMI",
+   "healthkit_identifier": "HKQuantityTypeIdentifierBodyMassIndex",
+   "display_name": "Body Mass Index"
+  },
+  {
+   "type_code": "lean_body_mass",
+   "unit": "kg",
+   "category": "body",
+   "aggregation": "latest",
+   "description": "Lean body mass",
+   "healthkit_identifier": "HKQuantityTypeIdentifierLeanBodyMass",
+   "display_name": "Lean Body Mass"
+  },
+  {
+   "type_code": "body_temperature",
+   "unit": "\u00b0C",
+   "category": "body",
+   "aggregation": "min_max_average",
+   "description": "Body temperature",
+   "healthkit_identifier": "HKQuantityTypeIdentifierBodyTemperature",
+   "display_name": "Body Temperature"
+  },
+  {
+   "type_code": "skin_temperature",
+   "unit": "\u00b0C",
+   "category": "body",
+   "aggregation": "min_max_average",
+   "description": "Skin temperature",
+   "healthkit_identifier": "HKQuantityTypeIdentifierAppleSleepingWristTemperature",
+   "display_name": "Wrist Temperature"
+  },
+  {
+   "type_code": "waist_circumference",
+   "unit": "cm",
+   "category": "body",
+   "aggregation": "latest",
+   "description": "Waist circumference",
+   "healthkit_identifier": "HKQuantityTypeIdentifierWaistCircumference",
+   "display_name": "Waist Circumference"
+  },
+  {
+   "type_code": "body_fat_mass",
+   "unit": "kg",
+   "category": "body",
+   "aggregation": "latest",
+   "description": "Body fat mass",
+   "healthkit_identifier": null,
+   "display_name": null
+  },
+  {
+   "type_code": "skeletal_muscle_mass",
+   "unit": "kg",
+   "category": "body",
+   "aggregation": "latest",
+   "description": "Skeletal muscle mass",
+   "healthkit_identifier": null,
+   "display_name": null
+  },
+  {
+   "type_code": "vo2_max",
+   "unit": "mL/kg/min",
+   "category": "fitness",
+   "aggregation": "latest",
+   "description": "VO2 max",
+   "healthkit_identifier": "HKQuantityTypeIdentifierVO2Max",
+   "display_name": "VO2 Max"
+  },
+  {
+   "type_code": "six_minute_walk_test_distance",
+   "unit": "m",
+   "category": "fitness",
+   "aggregation": "latest",
+   "description": "6-minute walk test",
+   "healthkit_identifier": "HKQuantityTypeIdentifierSixMinuteWalkTestDistance",
+   "display_name": "Six Minute Walk Test Distance"
+  },
+  {
+   "type_code": "steps",
+   "unit": "count",
+   "category": "activity",
+   "aggregation": "sum",
+   "description": "Step count",
+   "healthkit_identifier": "HKQuantityTypeIdentifierStepCount",
+   "display_name": "Steps"
+  },
+  {
+   "type_code": "energy",
+   "unit": "kcal",
+   "category": "activity",
+   "aggregation": "sum",
+   "description": "Active energy burned",
+   "healthkit_identifier": "HKQuantityTypeIdentifierActiveEnergyBurned",
+   "display_name": "Active Energy"
+  },
+  {
+   "type_code": "basal_energy",
+   "unit": "kcal",
+   "category": "activity",
+   "aggregation": "sum",
+   "description": "Basal/resting energy",
+   "healthkit_identifier": "HKQuantityTypeIdentifierBasalEnergyBurned",
+   "display_name": "Basal Energy"
+  },
+  {
+   "type_code": "stand_time",
+   "unit": "minutes",
+   "category": "activity",
+   "aggregation": "sum",
+   "description": "Time spent standing",
+   "healthkit_identifier": "HKQuantityTypeIdentifierAppleStandTime",
+   "display_name": "Stand Time"
+  },
+  {
+   "type_code": "exercise_time",
+   "unit": "minutes",
+   "category": "activity",
+   "aggregation": "sum",
+   "description": "Exercise duration",
+   "healthkit_identifier": "HKQuantityTypeIdentifierAppleExerciseTime",
+   "display_name": "Exercise Time"
+  },
+  {
+   "type_code": "physical_effort",
+   "unit": "kcal/kg/hr",
+   "category": "activity",
+   "aggregation": "min_max_average",
+   "description": "Physical effort score",
+   "healthkit_identifier": "HKQuantityTypeIdentifierPhysicalEffort",
+   "display_name": "Physical Effort"
+  },
+  {
+   "type_code": "flights_climbed",
+   "unit": "count",
+   "category": "activity",
+   "aggregation": "sum",
+   "description": "Floors/flights climbed",
+   "healthkit_identifier": "HKQuantityTypeIdentifierFlightsClimbed",
+   "display_name": "Flights Climbed"
+  },
+  {
+   "type_code": "average_met",
+   "unit": "MET",
+   "category": "activity",
+   "aggregation": "min_max_average",
+   "description": "Average metabolic equivalent",
+   "healthkit_identifier": null,
+   "display_name": null
+  },
+  {
+   "type_code": "distance_walking_running",
+   "unit": "m",
+   "category": "activity",
+   "aggregation": "sum",
+   "description": "Walking/running distance",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDistanceWalkingRunning",
+   "display_name": "Walking + Running Distance"
+  },
+  {
+   "type_code": "distance_cycling",
+   "unit": "m",
+   "category": "activity",
+   "aggregation": "sum",
+   "description": "Cycling distance",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDistanceCycling",
+   "display_name": "Cycling Distance"
+  },
+  {
+   "type_code": "distance_swimming",
+   "unit": "m",
+   "category": "activity",
+   "aggregation": "sum",
+   "description": "Swimming distance",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDistanceSwimming",
+   "display_name": "Swimming Distance"
+  },
+  {
+   "type_code": "distance_downhill_snow_sports",
+   "unit": "m",
+   "category": "activity",
+   "aggregation": "sum",
+   "description": "Skiing/snowboarding distance",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDistanceDownhillSnowSports",
+   "display_name": "Downhill Snow Sports Distance"
+  },
+  {
+   "type_code": "distance_other",
+   "unit": "meters",
+   "category": "activity",
+   "aggregation": "sum",
+   "description": "Other distance",
+   "healthkit_identifier": null,
+   "display_name": null
+  },
+  {
+   "type_code": "walking_step_length",
+   "unit": "cm",
+   "category": "activity",
+   "aggregation": "min_max_average",
+   "description": "Average step length",
+   "healthkit_identifier": "HKQuantityTypeIdentifierWalkingStepLength",
+   "display_name": "Walking Step Length"
+  },
+  {
+   "type_code": "walking_speed",
+   "unit": "m/s",
+   "category": "activity",
+   "aggregation": "min_max_average",
+   "description": "Walking speed",
+   "healthkit_identifier": "HKQuantityTypeIdentifierWalkingSpeed",
+   "display_name": "Walking Speed"
+  },
+  {
+   "type_code": "walking_double_support_percentage",
+   "unit": "%",
+   "category": "activity",
+   "aggregation": "min_max_average",
+   "description": "Double support time",
+   "healthkit_identifier": "HKQuantityTypeIdentifierWalkingDoubleSupportPercentage",
+   "display_name": "Walking Double Support Percentage"
+  },
+  {
+   "type_code": "walking_asymmetry_percentage",
+   "unit": "%",
+   "category": "activity",
+   "aggregation": "min_max_average",
+   "description": "Gait asymmetry",
+   "healthkit_identifier": "HKQuantityTypeIdentifierWalkingAsymmetryPercentage",
+   "display_name": "Walking Asymmetry Percentage"
+  },
+  {
+   "type_code": "walking_steadiness",
+   "unit": "%",
+   "category": "activity",
+   "aggregation": "min_max_average",
+   "description": "Walking steadiness score",
+   "healthkit_identifier": "HKQuantityTypeIdentifierAppleWalkingSteadiness",
+   "display_name": "Walking Steadiness"
+  },
+  {
+   "type_code": "stair_descent_speed",
+   "unit": "m/s",
+   "category": "activity",
+   "aggregation": "min_max_average",
+   "description": "Stair descent speed",
+   "healthkit_identifier": "HKQuantityTypeIdentifierStairDescentSpeed",
+   "display_name": "Stair Descent Speed"
+  },
+  {
+   "type_code": "stair_ascent_speed",
+   "unit": "m/s",
+   "category": "activity",
+   "aggregation": "min_max_average",
+   "description": "Stair ascent speed",
+   "healthkit_identifier": "HKQuantityTypeIdentifierStairAscentSpeed",
+   "display_name": "Stair Ascent Speed"
+  },
+  {
+   "type_code": "running_power",
+   "unit": "watts",
+   "category": "activity",
+   "aggregation": "min_max_average",
+   "description": "Running power",
+   "healthkit_identifier": "HKQuantityTypeIdentifierRunningPower",
+   "display_name": "Running Power"
+  },
+  {
+   "type_code": "running_speed",
+   "unit": "m/s",
+   "category": "activity",
+   "aggregation": "min_max_average",
+   "description": "Running speed",
+   "healthkit_identifier": "HKQuantityTypeIdentifierRunningSpeed",
+   "display_name": "Running Speed"
+  },
+  {
+   "type_code": "running_vertical_oscillation",
+   "unit": "cm",
+   "category": "activity",
+   "aggregation": "min_max_average",
+   "description": "Vertical oscillation",
+   "healthkit_identifier": "HKQuantityTypeIdentifierRunningVerticalOscillation",
+   "display_name": "Running Vertical Oscillation"
+  },
+  {
+   "type_code": "running_ground_contact_time",
+   "unit": "ms",
+   "category": "activity",
+   "aggregation": "min_max_average",
+   "description": "Ground contact time",
+   "healthkit_identifier": "HKQuantityTypeIdentifierRunningGroundContactTime",
+   "display_name": "Running Ground Contact Time"
+  },
+  {
+   "type_code": "running_stride_length",
+   "unit": "cm",
+   "category": "activity",
+   "aggregation": "min_max_average",
+   "description": "Running stride length",
+   "healthkit_identifier": "HKQuantityTypeIdentifierRunningStrideLength",
+   "display_name": "Running Stride Length"
+  },
+  {
+   "type_code": "swimming_stroke_count",
+   "unit": "count",
+   "category": "activity",
+   "aggregation": "sum",
+   "description": "Swimming strokes",
+   "healthkit_identifier": "HKQuantityTypeIdentifierSwimmingStrokeCount",
+   "display_name": "Swimming Stroke Count"
+  },
+  {
+   "type_code": "underwater_depth",
+   "unit": "m",
+   "category": "activity",
+   "aggregation": "min_max_average",
+   "description": "Underwater depth",
+   "healthkit_identifier": "HKQuantityTypeIdentifierUnderwaterDepth",
+   "display_name": "Underwater Depth"
+  },
+  {
+   "type_code": "cadence",
+   "unit": "rpm",
+   "category": "activity",
+   "aggregation": "min_max_average",
+   "description": "Cadence",
+   "healthkit_identifier": null,
+   "display_name": null
+  },
+  {
+   "type_code": "power",
+   "unit": "watts",
+   "category": "activity",
+   "aggregation": "min_max_average",
+   "description": "Power output",
+   "healthkit_identifier": null,
+   "display_name": null
+  },
+  {
+   "type_code": "speed",
+   "unit": "m/s",
+   "category": "activity",
+   "aggregation": "min_max_average",
+   "description": "Speed",
+   "healthkit_identifier": null,
+   "display_name": null
+  },
+  {
+   "type_code": "workout_effort_score",
+   "unit": "apple_effort_score",
+   "category": "activity",
+   "aggregation": "latest",
+   "description": "Workout effort score",
+   "healthkit_identifier": "HKQuantityTypeIdentifierWorkoutEffortScore",
+   "display_name": "Workout Effort Score"
+  },
+  {
+   "type_code": "estimated_workout_effort_score",
+   "unit": "apple_effort_score",
+   "category": "activity",
+   "aggregation": "latest",
+   "description": "Estimated workout effort score",
+   "healthkit_identifier": "HKQuantityTypeIdentifierEstimatedWorkoutEffortScore",
+   "display_name": "Estimated Workout Effort Score"
+  },
+  {
+   "type_code": "environmental_audio_exposure",
+   "unit": "dBASPL",
+   "category": "environmental",
+   "aggregation": "min_max_average",
+   "description": "Environmental noise",
+   "healthkit_identifier": "HKQuantityTypeIdentifierEnvironmentalAudioExposure",
+   "display_name": "Environmental Audio Exposure"
+  },
+  {
+   "type_code": "headphone_audio_exposure",
+   "unit": "dBASPL",
+   "category": "environmental",
+   "aggregation": "min_max_average",
+   "description": "Headphone volume",
+   "healthkit_identifier": "HKQuantityTypeIdentifierHeadphoneAudioExposure",
+   "display_name": "Headphone Audio Exposure"
+  },
+  {
+   "type_code": "uv_exposure",
+   "unit": "count",
+   "category": "environmental",
+   "aggregation": "sum",
+   "description": "UV exposure",
+   "healthkit_identifier": "HKQuantityTypeIdentifierUVExposure",
+   "display_name": "UV Exposure"
+  },
+  {
+   "type_code": "inhaler_usage",
+   "unit": "count",
+   "category": "environmental",
+   "aggregation": "sum",
+   "description": "Inhaler usage",
+   "healthkit_identifier": "HKQuantityTypeIdentifierInhalerUsage",
+   "display_name": "Inhaler Usage"
+  },
+  {
+   "type_code": "weather_temperature",
+   "unit": "\u00b0C",
+   "category": "environmental",
+   "aggregation": "min_max_average",
+   "description": "Weather temperature",
+   "healthkit_identifier": null,
+   "display_name": null
+  },
+  {
+   "type_code": "weather_humidity",
+   "unit": "%",
+   "category": "environmental",
+   "aggregation": "min_max_average",
+   "description": "Weather humidity",
+   "healthkit_identifier": null,
+   "display_name": null
+  },
+  {
+   "type_code": "garmin_stress_level",
+   "unit": "score",
+   "category": "provider_specific",
+   "aggregation": "min_max_average",
+   "description": "Garmin stress score",
+   "healthkit_identifier": null,
+   "display_name": null
+  },
+  {
+   "type_code": "garmin_skin_temperature",
+   "unit": "\u00b0C",
+   "category": "provider_specific",
+   "aggregation": "min_max_average",
+   "description": "Garmin skin temperature deviation",
+   "healthkit_identifier": null,
+   "display_name": null
+  },
+  {
+   "type_code": "garmin_fitness_age",
+   "unit": "years",
+   "category": "provider_specific",
+   "aggregation": "latest",
+   "description": "Garmin fitness age estimate",
+   "healthkit_identifier": null,
+   "display_name": null
+  },
+  {
+   "type_code": "garmin_body_battery",
+   "unit": "%",
+   "category": "provider_specific",
+   "aggregation": "min_max_average",
+   "description": "Garmin body battery",
+   "healthkit_identifier": null,
+   "display_name": null
+  },
+  {
+   "type_code": "electrodermal_activity",
+   "unit": "S",
+   "category": "other",
+   "aggregation": "min_max_average",
+   "description": "Electrodermal activity",
+   "healthkit_identifier": "HKQuantityTypeIdentifierElectrodermalActivity",
+   "display_name": "Electrodermal Activity"
+  },
+  {
+   "type_code": "push_count",
+   "unit": "count",
+   "category": "other",
+   "aggregation": "sum",
+   "description": "Push count",
+   "healthkit_identifier": "HKQuantityTypeIdentifierPushCount",
+   "display_name": "Push Count"
+  },
+  {
+   "type_code": "atrial_fibrillation_burden",
+   "unit": "%",
+   "category": "other",
+   "aggregation": "min_max_average",
+   "description": "Atrial fibrillation burden",
+   "healthkit_identifier": "HKQuantityTypeIdentifierAtrialFibrillationBurden",
+   "display_name": "Atrial Fibrillation Burden"
+  },
+  {
+   "type_code": "insulin_delivery",
+   "unit": "IU",
+   "category": "other",
+   "aggregation": "sum",
+   "description": "Insulin delivery",
+   "healthkit_identifier": "HKQuantityTypeIdentifierInsulinDelivery",
+   "display_name": "Insulin Delivery"
+  },
+  {
+   "type_code": "number_of_times_fallen",
+   "unit": "count",
+   "category": "other",
+   "aggregation": "sum",
+   "description": "Fall count",
+   "healthkit_identifier": "HKQuantityTypeIdentifierNumberOfTimesFallen",
+   "display_name": "Number of Times Fallen"
+  },
+  {
+   "type_code": "number_of_alcoholic_beverages",
+   "unit": "count",
+   "category": "other",
+   "aggregation": "sum",
+   "description": "Alcoholic beverages",
+   "healthkit_identifier": "HKQuantityTypeIdentifierNumberOfAlcoholicBeverages",
+   "display_name": "Number of Alcoholic Beverages"
+  },
+  {
+   "type_code": "nike_fuel",
+   "unit": "count",
+   "category": "other",
+   "aggregation": "sum",
+   "description": "Nike Fuel",
+   "healthkit_identifier": "HKQuantityTypeIdentifierNikeFuel",
+   "display_name": "Nike Fuel"
+  },
+  {
+   "type_code": "hydration",
+   "unit": "mL",
+   "category": "other",
+   "aggregation": "sum",
+   "description": "Hydration",
+   "healthkit_identifier": "HKQuantityTypeIdentifierDietaryWater",
+   "display_name": "Hydration"
+  }
+ ]
+}

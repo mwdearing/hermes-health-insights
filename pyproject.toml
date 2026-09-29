@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "health-insights"
+dynamic = ["version"]
+description = "Deterministic, local-first analysis of Apple Health data from a HealthRelay/Health Bridge receiver database: trends, concerns, nutrition and labs."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.11"
+dependencies = ["PyYAML>=6"]
+
+[project.scripts]
+health-insights = "health_insights.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "health_insights.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["health_insights*"]
+
+[tool.setuptools.package-data]
+health_insights = ["data/*.yaml"]
