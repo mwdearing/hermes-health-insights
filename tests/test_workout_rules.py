@@ -1,6 +1,6 @@
 """Tests for workout concern rules.
 
-Synthetic data only. No real paths, no health-insights-data, no real DB.
+Synthetic data only. No real paths, no real data directory, no real DB.
 """
 from __future__ import annotations
 

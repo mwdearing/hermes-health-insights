@@ -1,6 +1,6 @@
 """Tests for nutrition-gap concern rule.
 
-Synthetic data only — no real paths, no health-insights-data, no real DB.
+Synthetic data only — no real paths, no real data directory, no real DB.
 """
 from __future__ import annotations
 
