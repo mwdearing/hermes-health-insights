@@ -60,6 +60,21 @@ def _parse_args(argv):
     p_demo.add_argument("--out", required=True, help="Path of the SQLite file to create")
     p_demo.add_argument("--days", type=int, default=60)
 
+    p_mod = sub.add_parser("modules", help="Optional modules you can turn on or off (all off by default)")
+    mod_sub = p_mod.add_subparsers(dest="modules_command", required=True)
+    p_ml = mod_sub.add_parser("list", help="Show every module and whether it is on")
+    p_ml.add_argument("--json", action="store_true")
+    for name, text in (("enable", "Turn a module on"), ("disable", "Turn a module off")):
+        p_mx = mod_sub.add_parser(name, help=text)
+        p_mx.add_argument("module_id")
+    p_mr = mod_sub.add_parser("report", help="A readable report from a module that has one (for example glp1)")
+    p_mr.add_argument("module_id")
+    p_mr.add_argument("--db", required=True, help="Path to the bridge SQLite snapshot")
+    p_mr.add_argument("--date", help="Local day (YYYY-MM-DD); defaults to yesterday")
+    p_mi = mod_sub.add_parser("info", help="What a module does, what data it needs, and its cautions")
+    p_mi.add_argument("module_id")
+    p_mi.add_argument("--db", help="Also check which of its data types exist in this database")
+
     p_wk = sub.add_parser("weekly", help="Weekly health trends: 7d vs 28d per metric + BP")
     p_wk.add_argument("--db", required=True, help="Path to the bridge SQLite snapshot")
     p_wk.add_argument("--date", help="Local day (YYYY-MM-DD); defaults to Chicago today")
@@ -343,6 +358,62 @@ def _workouts_dispatch(args) -> int:
     return 1
 
 
+def _modules_dispatch(args) -> int:
+    from . import modules
+
+    cmd = args.modules_command
+    if cmd == "list":
+        rows = [{"id": m.id, "title": m.title, "category": m.category, "summary": m.summary,
+                 "enabled": modules.is_enabled(m.id)} for m in sorted(modules.REGISTRY.values(), key=lambda m: m.id)]
+        if args.json:
+            print(json.dumps(rows, indent=2, ensure_ascii=False))
+            return 0
+        width = max((len(r["id"]) for r in rows), default=2)
+        for r in rows:
+            print(f"[{'on ' if r['enabled'] else 'off'}] {r['id']:<{width}}  {r['title']}: {r['summary']}")
+        print(f"\nTurn one on:  health-insights modules enable <id>     Details: health-insights modules info <id>")
+        print(f"Switches are stored in {settings.modules_file()}")
+        return 0
+    try:
+        module = modules.get(args.module_id)
+    except KeyError as exc:
+        print(exc.args[0], file=sys.stderr)
+        return 2
+    if cmd in ("enable", "disable"):
+        path = modules.set_enabled(module.id, cmd == "enable")
+        print(f"{module.title} is now {'ON' if cmd == 'enable' else 'OFF'} (saved in {path}).")
+        if cmd == "enable":
+            for caution in module.cautions:
+                print(f"  Note: {caution}")
+        return 0
+    if cmd == "report":
+        if module.report is None:
+            print(f"{module.title} has no report; it only adds checks to `concerns`.", file=sys.stderr)
+            return 2
+        if not modules.is_enabled(module.id):
+            print(f"{module.title} is off. Turn it on first: health-insights modules enable {module.id}", file=sys.stderr)
+            return 2
+        print("\n".join(module.report(args.db, args.date or _default_date())))
+        return 0
+    print(f"{module.title} ({module.id}) - {'ON' if modules.is_enabled(module.id) else 'off'}")
+    print(f"  {module.summary}")
+    print(f"  Category: {module.category}")
+    if module.data_needs:
+        print(f"  Works best with: {', '.join(module.data_needs)}")
+    if module.skills:
+        print(f"  Agent skills: {', '.join(module.skills)}")
+    for caution in module.cautions:
+        print(f"  Caution: {caution}")
+    if module.red_flags:
+        print("  Act on these whatever the data says (urgent or emergency care):")
+        for flag in module.red_flags:
+            print(f"    - {flag}")
+    if getattr(args, "db", None):
+        info = modules.readiness(module.id, args.db)
+        print(f"  In {args.db}: have {', '.join(info['present']) or 'none'}; missing {', '.join(info['missing']) or 'none'}")
+    return 0
+
+
 def _concerns_dispatch(args) -> int:
     """Route `concerns` to the concerns module."""
     from . import concerns
@@ -369,6 +440,8 @@ def main(argv=None) -> int:
         demo.build(args.out, days=args.days)
         print(f"Wrote synthetic demo database to {args.out}. Try: health-insights weekly --db {args.out}")
         return 0
+    if args.command == "modules":
+        return _modules_dispatch(args)
     if args.command == "coverage":
         return cmd_coverage(args)
     if args.command == "daily":

@@ -12,6 +12,12 @@ from zoneinfo import ZoneInfo
 import yaml
 
 
+def modules_file() -> Path:
+    """The small file the `health-insights modules` command owns (so your config.yaml comments are never rewritten)."""
+    override = os.environ.get("HEALTH_INSIGHTS_MODULES_FILE")
+    return Path(override) if override else _config_path().with_name("modules.yaml")
+
+
 def package_data(name: str) -> Path:
     """A default file shipped inside the package (health_monitor.yaml, dri.yaml)."""
     return Path(__file__).resolve().parent / "data" / name
@@ -47,6 +53,30 @@ def _system_zone() -> str:
     except OSError:
         pass
     return "UTC"
+
+
+@lru_cache(maxsize=1)
+def _modules_file_data() -> dict:
+    try:
+        data = yaml.safe_load(modules_file().read_text())
+    except (OSError, yaml.YAMLError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def module_settings() -> dict:
+    """module id -> bool or mapping. Precedence: env list, then modules.yaml, then config.yaml `modules:`."""
+    merged: dict = {}
+    block = _config().get("modules")
+    if isinstance(block, dict):
+        merged.update(block)
+    merged.update(_modules_file_data())
+    env = os.environ.get("HEALTH_INSIGHTS_MODULES")
+    if env:
+        for name in (part.strip() for part in env.split(",")):
+            if name:
+                merged[name] = True
+    return merged
 
 
 @lru_cache(maxsize=1)
@@ -143,4 +173,5 @@ def weight_unit() -> str:
 
 def reset() -> None:
     _config.cache_clear()
+    _modules_file_data.cache_clear()
     timezone_name.cache_clear()

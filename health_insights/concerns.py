@@ -73,7 +73,8 @@ def evaluate(
     """
     ref_date = Date.fromisoformat(ref_date_str)
     if rules is None:
-        rules = DEFAULT_RULES
+        from . import modules  # late import: modules imports rule code that imports this module
+        rules = list(DEFAULT_RULES) + modules.module_rules()
 
     all_findings: list[Finding] = []
     for name, fn in rules:

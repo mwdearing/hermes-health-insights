@@ -60,7 +60,8 @@ def adherence_findings(db_path: str, ref_date, days: int = WINDOW_DAYS) -> list[
     the medlog store, not the merged history database. *ref_date* may be a
     date object or a "YYYY-MM-DD" string.
     """
-    if not settings.medlog_enabled():
+    from .. import modules
+    if not modules.is_enabled("medication_adherence"):
         return []
     from ..concerns import Finding  # late import to avoid circular import
 

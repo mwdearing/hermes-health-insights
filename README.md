@@ -30,6 +30,15 @@ hermes plugins enable health-insights
 ```
 Then follow the `health-insights-setup` skill. Configuration is one optional file, `~/.config/health-insights/config.yaml` (timezone, weight unit, data directory, receiver database, energy profile).
 
+## Optional modules (all off by default)
+Extra checks for specific situations are opt-in modules. See what exists and switch them with:
+```bash
+health-insights modules list
+health-insights modules info <id>
+health-insights modules enable <id>     # and: disable <id>
+```
+Available now: `glp1` (monitoring while on a GLP-1 type medicine, [details](docs/GLP1_MONITORING.md)) and `medication_adherence`. Details, the settings file and how to add a module: [docs/MODULES.md](docs/MODULES.md). Your agent can do this for you with the `health-insights-modules` skill, and only when you ask.
+
 ## Privacy and trust
 - Everything runs on your machine. Nothing is uploaded.
 - Personal integrations are off by default: missed-dose counts from a `medlog` CLI, a push command, and wording by a local model endpoint. With no model configured a fixed template writes the summary.
