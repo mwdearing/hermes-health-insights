@@ -33,6 +33,14 @@ Two steps: the plugin adds skills to your agent; the analysis tool is installed 
    ```
    Then ask your agent to follow the `health-insights-setup` skill.
 
+### Upgrade
+`hermes plugins update health-insights` refuses installs pinned to a commit. Move both pieces to a new commit (use the 40-character sha of the release you want):
+```bash
+hermes plugins install mwdearing/hermes-health-insights --force --ref <sha>
+pipx install --force git+https://github.com/mwdearing/hermes-health-insights@<sha>
+```
+Run the first command in an **interactive terminal**: the plugin declares a PyYAML dependency and Hermes asks before installing it. A non-interactive run skips the dependency and refuses to replace an active plugin (`--no-deps` cannot replace an active plugin either). `--force` keeps the plugin enabled or disabled as it was; start a new session afterwards. Check the tool with `health-insights --version`. Hermes installs the plugin into `plugins/health-insights` under its home (`hermes plugins list` shows the name).
+
 ### Point it at your database
 Set the receiver database once; after that no command needs `--db`. The tool uses the first of these that is set:
 1. `--db <path>` on the command
@@ -45,7 +53,7 @@ Check it with `health-insights concerns`. If the database cannot be opened, the 
 ## Uninstall
 ```bash
 hermes plugins uninstall health-insights      # also: hermes plugins list, hermes plugins show health-insights
-pipx uninstall hermes-health-insights
+pipx uninstall health-insights
 ```
 Optionally delete what the tool created: `~/.config/health-insights/` (settings and module switches) and `~/.local/share/health-insights/` (imported lab results and other local data). Your receiver database and `~/.config/healthrelay/db-path` belong to HealthRelay and are not touched.
 
