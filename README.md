@@ -6,6 +6,8 @@ Works on the SQLite database written by a self-hosted [HealthRelay](https://gith
 
 > Informational only, not medical advice. The rules are simple thresholds and can be wrong.
 
+Setting up the whole chain (app and receiver, hermes-healthrelay, this plugin, hermes-medlog)? Follow the [Full setup guide](https://github.com/mwdearing/health-relay/blob/main/docs/full-setup.md): one ordered walkthrough with a check after each step.
+
 ## What it does
 | Command | Purpose |
 | --- | --- |
