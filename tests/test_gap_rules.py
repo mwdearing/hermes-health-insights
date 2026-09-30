@@ -271,3 +271,59 @@ class TestEvidenceFormat:
             assert "; " in ev
         finally:
             os.unlink(db_path)
+
+
+# ---------------------------------------------------------------------------
+# Store-level staleness (1.5)
+# ---------------------------------------------------------------------------
+
+
+class TestStoreStaleness:
+    def test_fires_for_a_short_history_the_14_day_rule_ignores(self):
+        from health_insights.concern_rules import gap_rules
+
+        db_path = _make_db({"steps": [8, 9, 10]})  # 3 days of history, newest 8 days old
+        try:
+            assert gap_rules.data_gap_findings(db_path, _REF, config=_FULL_CONFIG) == []
+            findings = gap_rules.store_staleness_findings(db_path, _REF)
+            assert len(findings) == 1
+            f = findings[0]
+            assert f.id == "store_stale"
+            assert f.level == 2
+            assert f.title == f"No new health data since {(_REF - timedelta(days=8)).isoformat()}"
+            assert "newest record 8 days old" in f.evidence
+            assert "phone" in f.advice.lower() and "receiver" in f.advice.lower()
+        finally:
+            os.unlink(db_path)
+
+    def test_silent_when_data_is_recent(self):
+        from health_insights.concern_rules import gap_rules
+
+        db_path = _make_db({"steps": [1, 2, 3]})
+        try:
+            assert gap_rules.store_staleness_findings(db_path, _REF) == []
+        finally:
+            os.unlink(db_path)
+
+    def test_boundary_three_days_is_not_stale(self):
+        from health_insights.concern_rules import gap_rules
+
+        db_path = _make_db({"steps": [3]})
+        try:
+            assert gap_rules.store_staleness_findings(db_path, _REF) == []
+        finally:
+            os.unlink(db_path)
+
+    def test_empty_or_missing_table_is_silent(self):
+        from health_insights.concern_rules import gap_rules
+
+        db_path = _make_no_table_db()
+        try:
+            assert gap_rules.store_staleness_findings(db_path, _REF) == []
+        finally:
+            os.unlink(db_path)
+
+    def test_registered_in_default_rules(self):
+        from health_insights.concerns import DEFAULT_RULES
+
+        assert "store_staleness" in [name for name, _ in DEFAULT_RULES]

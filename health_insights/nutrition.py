@@ -200,6 +200,23 @@ def _low_counts(daily: dict, logged_days: list[str], dri: dict, weight_kg: Optio
     return out
 
 
+def _dri_table(dri_arg: str, cfg: dict) -> dict:
+    """Return {group, label, default} for the DRI table used in this report."""
+    default = dri_arg == str(settings.package_data("dri.yaml"))
+    group = cfg.get("group", "")
+    if group.startswith("male "):
+        age_range = group[5:]
+        label = f"adult men {age_range.replace('-', ' to ')}" if age_range else group
+    elif group.startswith("female "):
+        age_range = group[7:]
+        label = f"adult women {age_range.replace('-', ' to ')}" if age_range else group
+    elif group:
+        label = group
+    else:
+        label = "unspecified group"
+    return {"group": group, "label": label, "default": default}
+
+
 def _wrap(prefix: str, names: list[str], width: int = 160, sep: str = ", ") -> list[str]:
     """One line '<prefix>a, b, c' wrapped onto two-space-indented continuation lines, none over `width`."""
     lines: list[str] = []
@@ -446,6 +463,13 @@ def report(
 
     lines: list[str] = [header]
 
+    # DRI table label (after header, before any nutrient lines)
+    dri_info = _dri_table(dri, dri_cfg)
+    if dri_info["default"]:
+        lines.append(f"Reference: Dietary Reference Intakes for {dri_info['label']} (default table; use --dri for others)")
+    else:
+        lines.append(f"Reference: Dietary Reference Intakes for {dri_info['label']} (custom table from --dri)")
+
     # ---- Energy line (IOM EER target when `pal` is configured, else Mifflin-St Jeor) ----
     height_cm = _latest_height(db_path, ref)
     energy_weight = _recent_weight(db_path, ref)
@@ -490,9 +514,11 @@ def report(
         )
         lines.append(line)
 
-    # Supplement candidates (tracked vitamins/minerals low on low_days+ days)
+    # Consistently below target (tracked vitamins/minerals low on low_days+ days)
     candidates = _supplement_candidates(low_counts, dri_cfg, tracked, as_labels=True)
-    lines.extend(_wrap("Supplement candidates: ", candidates or ["none"]))
+    lines.extend(_wrap("Consistently below target: ", candidates or ["none"]))
+    if candidates:
+        lines.append("  (worth discussing with a clinician or dietitian)")
 
     # Not tracked (an Apple type with no rows in the window)
     not_tracked = _not_tracked(dri_cfg, tracked)
@@ -662,6 +688,7 @@ def report_json(
         "end": end.isoformat(),
         "days_logged": days_logged,
         "days_partial": days_partial,
+        "dri_table": _dri_table(dri, dri_cfg),
         "nutrients": nutrients,
         "supplement_candidates": candidates,
         "not_tracked": not_tracked,

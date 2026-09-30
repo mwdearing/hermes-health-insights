@@ -1,19 +1,29 @@
 ---
 name: health-insights-setup
-description: Use when the user wants to set up the health-insights CLI - install it, point it at their HealthRelay receiver database, set timezone, units and profile, and try it on demo data first.
+description: Set up health-insights - install the CLI, point it at your HealthRelay database once, try the demo, set timezone, units and energy profile.
 license: Apache-2.0
 compatibility: Python 3.11+, PyYAML. Reads a HealthRelay / Health Bridge receiver SQLite database.
 ---
 
 # health-insights setup
 
-The plugin only holds skills. The analysis code is the `health-insights` command line tool; the agent runs it and explains the output.
+The plugin only holds skills. The analysis code is the `health-insights` command line tool, installed separately; the agent runs it and explains the output. Work through the checklist in order and confirm each expected output before moving on.
 
-1. Install: `pipx install git+https://github.com/mwdearing/hermes-health-insights` (or `uv tool install` / a venv). Check with `health-insights --help`.
-2. Try it on synthetic data first, no health data involved:
-   `health-insights demo --out demo.sqlite` then `health-insights weekly --db demo.sqlite`.
-3. Point it at the user's receiver database (the file the HealthRelay receiver writes; see the `healthrelay` plugin's setup skill). Use a COPY or the live file read-only; never write to it.
-4. Create `~/.config/health-insights/config.yaml` (all keys optional):
+1. **Is the tool installed?** Run `health-insights --version`.
+   - Expected: `health-insights <version>`.
+   - If "command not found": `pipx install git+https://github.com/mwdearing/hermes-health-insights` (or `uv tool install` / a venv), then run `--version` again.
+2. **Try it on synthetic data** (no health data involved): `health-insights demo --out demo.sqlite`, then `health-insights weekly --db demo.sqlite`.
+   - Expected: a "Weekly health ..." report with a line per metric.
+3. **Set the database once** (the file the HealthRelay receiver writes; see the `healthrelay` plugin's setup skill). Use a COPY or the live file read-only; never write to it. The tool looks in this order and uses the first that is set:
+   1. `--db <path>` on the command
+   2. the `HEALTH_INSIGHTS_BRIDGE_DB` environment variable
+   3. `bridge_db:` in `~/.config/health-insights/config.yaml`
+   4. the first line of `~/.config/healthrelay/db-path`
+   Recommended: write the path into `~/.config/healthrelay/db-path` (one line). If the healthrelay plugin is also used, both tools then share one setting.
+4. **Confirm without `--db`**: run `health-insights concerns`.
+   - Expected: either finding lines such as `👀 [worth watching] title - evidence`, or a line saying nothing is flagged.
+   - If it prints `cannot open the receiver database ...` and exits with status 2, the path from step 3 is missing or wrong; fix it and repeat. Do not guess a path.
+5. **Optional profile and preferences.** Create `~/.config/health-insights/config.yaml` (every key optional):
    ```yaml
    timezone: America/New_York      # default: the system timezone
    weight_unit: lb                 # kg (default) or lb; stored data is always kg
@@ -25,6 +35,9 @@ The plugin only holds skills. The analysis code is the `health-insights` command
      pal: low_active               # sedentary | low_active | active | very_active
      goal_kcal: 0                  # 0 = maintain, negative = deficit
    ```
-5. Optional integrations are OFF by default: `integrations.medlog` (missed-dose counts from a `medlog` CLI), `notify_command`, and `narration.url` (an OpenAI-compatible LOCAL model for wording; otherwise a fixed template is used).
+   Ask the user for the profile values; do not choose them for the user.
+
+## Advanced (optional)
+`integrations.*` (for example `integrations.medlog`), `notify_command` and `narration.url` are hooks for personal tooling that is NOT included with this plugin: a separate `medlog` command line tool, a notification command, and a local OpenAI-compatible model for wording. Everything works without them (a fixed template writes summaries). Do not set them up unless the user says they have those tools.
 
 Privacy: everything runs locally. Do not upload the database, paste raw values into public places, or point `narration.url` at a cloud model unless the user accepts that.

@@ -2,10 +2,14 @@
 Command-line interface for the health_insights library.
 
 Usage:
-    python -m health_insights.cli coverage <db_path> [--window 30]
-    python -m health_insights.cli daily    <db_path> <type_code> [--window 30]
-    python -m health_insights.cli baseline <db_path> <type_code> [--window 30]
-    python -m health_insights.cli bp <db_path> --date YYYY-MM-DD
+    python -m health_insights.cli coverage [db_path] [--window 30]
+    python -m health_insights.cli daily    [db_path] <type_code> [--window 30]
+    python -m health_insights.cli baseline [db_path] <type_code> [--window 30]
+    python -m health_insights.cli bp [db_path] --date YYYY-MM-DD
+
+The receiver database is optional everywhere: --db (or the positional path), then the
+HEALTH_INSIGHTS_BRIDGE_DB environment variable, then `bridge_db` in the config file, then the first
+line of ~/.config/healthrelay/db-path.
 
 `coverage` prints the full coverage/freshness report (JSON + Markdown).
 `daily` prints the daily aggregate table for one type.
@@ -21,15 +25,66 @@ import json
 import sys
 
 from . import analysis
-from health_insights import settings
+from health_insights import __version__, settings
+
+
+class _DbError(Exception):
+    """The receiver database could not be resolved or opened; main() prints it and exits 2."""
+
+
+_LABS_DB_HELP = "Path of the labs SQLite database (default: <data dir>/labs/labs.sqlite)"
+_DB_HELP = "Path to the receiver SQLite database (default: HEALTH_INSIGHTS_BRIDGE_DB, bridge_db in the config, or ~/.config/healthrelay/db-path)"
+
+
+def _db_problem(path: str) -> str | None:
+    """Why *path* cannot be opened read-only as a SQLite database, or None when it can."""
+    import os
+    import sqlite3
+    from urllib.parse import quote
+
+    if not os.path.exists(path):
+        return "no such file"
+    if os.path.isdir(path):
+        return "it is a directory"
+    try:
+        conn = sqlite3.connect(f"file:{quote(os.path.abspath(path))}?mode=ro", uri=True)
+        try:
+            conn.execute("SELECT name FROM sqlite_master LIMIT 1").fetchall()
+        finally:
+            conn.close()
+    except (sqlite3.Error, OSError) as exc:
+        return str(exc) or type(exc).__name__
+    return None
+
+
+def _receiver_db(explicit=None) -> str:
+    """Resolve (--db, env, config, db-path file) and check the receiver database; raise _DbError with the one-line message."""
+    path = explicit or settings.bridge_db()
+    tail = (f"Set it with --db, HEALTH_INSIGHTS_BRIDGE_DB, bridge_db in {settings.config_path()}, "
+            "or ~/.config/healthrelay/db-path.")
+    if not path:
+        raise _DbError(f"health-insights: cannot open the receiver database at (not set): no database configured. {tail}")
+    problem = _db_problem(path)
+    if problem is not None:
+        raise _DbError(f"health-insights: cannot open the receiver database at {path}: {problem}. {tail}")
+    return path
+
+
+def _add_db_option(parser, required_help=_DB_HELP):
+    parser.add_argument("--db", help=required_help)
 
 
 def _parse_args(argv):
-    parser = argparse.ArgumentParser(prog="health_insights", description="Health monitoring analysis (stdlib).")
+    parser = argparse.ArgumentParser(
+        prog="health-insights",
+        description="Health monitoring analysis (stdlib).",
+    )
+    parser.add_argument("--version", action="version", version=f"health-insights {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_cov = sub.add_parser("coverage", help="Full coverage/freshness report")
-    p_cov.add_argument("db_path", help="Path to the bridge SQLite snapshot")
+    p_cov.add_argument("db_path", nargs="?", help=_DB_HELP)
+    _add_db_option(p_cov, "Same as the positional path")
     p_cov.add_argument("--window", type=int, default=analysis.DEFAULT_METRIC_WINDOW_DAYS)
     p_cov.add_argument("--baseline", type=int, default=analysis.DEFAULT_BASELINE_WINDOW_DAYS)
     p_cov.add_argument("--json", action="store_true", help="Print JSON document")
@@ -37,24 +92,29 @@ def _parse_args(argv):
     p_cov.add_argument("--out", help="Write JSON to file")
 
     p_daily = sub.add_parser("daily", help="Daily aggregates for one type")
-    p_daily.add_argument("db_path")
-    p_daily.add_argument("type_code")
+    p_daily.add_argument("first", nargs="?", metavar="[db_path] type_code", help="`daily <db_path> <type_code>` or `daily <type_code>` (database resolved as for --db)")
+    p_daily.add_argument("second", nargs="?", metavar=argparse.SUPPRESS, help=argparse.SUPPRESS)
+    _add_db_option(p_daily)
     p_daily.add_argument("--window", type=int, default=analysis.DEFAULT_METRIC_WINDOW_DAYS)
+    p_daily.add_argument("--baseline", type=int, default=analysis.DEFAULT_BASELINE_WINDOW_DAYS)
 
     p_base = sub.add_parser("baseline", help="30/90-day baseline for one type")
-    p_base.add_argument("db_path")
-    p_base.add_argument("type_code")
+    p_base.add_argument("first", nargs="?", metavar="[db_path] type_code", help="`baseline <db_path> <type_code>` or `baseline <type_code>` (database resolved as for --db)")
+    p_base.add_argument("second", nargs="?", metavar=argparse.SUPPRESS, help=argparse.SUPPRESS)
+    _add_db_option(p_base)
     p_base.add_argument("--window", type=int, default=analysis.DEFAULT_METRIC_WINDOW_DAYS)
     p_base.add_argument("--baseline", type=int, default=analysis.DEFAULT_BASELINE_WINDOW_DAYS)
 
     p_anom = sub.add_parser("anomalies", help="Anomaly flags for one local day")
-    p_anom.add_argument("db_path")
-    p_anom.add_argument("--date", help="Local day (YYYY-MM-DD); defaults to yesterday Chicago")
+    p_anom.add_argument("db_path", nargs="?", help=_DB_HELP)
+    _add_db_option(p_anom, "Same as the positional path")
+    p_anom.add_argument("--date", help="Local day (YYYY-MM-DD); defaults to yesterday in your configured time zone")
     p_anom.add_argument("--config", help="Path to health_monitor.yaml")
 
     p_bp = sub.add_parser("bp", help="Blood pressure bands and flags for one local day")
-    p_bp.add_argument("db_path")
-    p_bp.add_argument("--date", help="Local day (YYYY-MM-DD); defaults to Chicago today")
+    p_bp.add_argument("db_path", nargs="?", help=_DB_HELP)
+    _add_db_option(p_bp, "Same as the positional path")
+    p_bp.add_argument("--date", help="Local day (YYYY-MM-DD); defaults to today in your configured time zone")
 
     p_demo = sub.add_parser("demo", help="Write a synthetic demo database (no real data) to try the commands")
     p_demo.add_argument("--out", required=True, help="Path of the SQLite file to create")
@@ -69,15 +129,15 @@ def _parse_args(argv):
         p_mx.add_argument("module_id")
     p_mr = mod_sub.add_parser("report", help="A readable report from a module that has one (for example glp1)")
     p_mr.add_argument("module_id")
-    p_mr.add_argument("--db", required=True, help="Path to the bridge SQLite snapshot")
+    p_mr.add_argument("--db", help=_DB_HELP)
     p_mr.add_argument("--date", help="Local day (YYYY-MM-DD); defaults to yesterday")
     p_mi = mod_sub.add_parser("info", help="What a module does, what data it needs, and its cautions")
     p_mi.add_argument("module_id")
-    p_mi.add_argument("--db", help="Also check which of its data types exist in this database")
+    p_mi.add_argument("--db", help="Also check which of its data types exist in this database (given explicitly only)")
 
     p_wk = sub.add_parser("weekly", help="Weekly health trends: 7d vs 28d per metric + BP")
-    p_wk.add_argument("--db", required=True, help="Path to the bridge SQLite snapshot")
-    p_wk.add_argument("--date", help="Local day (YYYY-MM-DD); defaults to Chicago today")
+    p_wk.add_argument("--db", help=_DB_HELP)
+    p_wk.add_argument("--date", help="Local day (YYYY-MM-DD); defaults to today in your configured time zone")
     p_wk.add_argument("--config", help="Path to health_monitor.yaml")
 
     # labs: nested subcommand group for the clinical-records importer.
@@ -86,26 +146,26 @@ def _parse_args(argv):
 
     p_imp = labs_sub.add_parser("import", help="Import a clinical-records export")
     p_imp.add_argument("zip_path", help="Path to export_YYYY-MM-DD.zip")
-    p_imp.add_argument("--db", required=True, help="SQLite DB path")
+    p_imp.add_argument("--db", help=_LABS_DB_HELP)
 
     p_sum = labs_sub.add_parser("summary", help="Summary counts from a DB")
-    p_sum.add_argument("--db", required=True, help="SQLite DB path")
+    p_sum.add_argument("--db", help=_LABS_DB_HELP)
 
     p_trd = labs_sub.add_parser("trend", help="Trend for one LOINC code")
-    p_trd.add_argument("--db", required=True, help="SQLite DB path")
+    p_trd.add_argument("--db", help=_LABS_DB_HELP)
     p_trd.add_argument("--loinc", required=True, help="LOINC code")
 
     p_dig = labs_sub.add_parser("digest-line", help="New-results digest line for --date")
-    p_dig.add_argument("--db", required=True, help="SQLite DB path")
+    p_dig.add_argument("--db", help=_LABS_DB_HELP)
     p_dig.add_argument("--date", help="Local day (YYYY-MM-DD)")
 
     p_json = labs_sub.add_parser("import-json", help="Import lab results from a FHIR JSON file")
     p_json.add_argument("json_path", help="Path to JSON file (list of Observations or FHIR Bundle)")
-    p_json.add_argument("--db", required=True, help="SQLite DB path")
+    p_json.add_argument("--db", help=_LABS_DB_HELP)
 
     p_labs_bridge = labs_sub.add_parser("import-bridge", help="Import lab results from the bridge DB")
-    p_labs_bridge.add_argument("--bridge", required=True, help="Path to the bridge SQLite DB")
-    p_labs_bridge.add_argument("--db", required=True, help="SQLite DB path")
+    p_labs_bridge.add_argument("--bridge", help=_DB_HELP)
+    p_labs_bridge.add_argument("--db", help=_LABS_DB_HELP)
 
     # ecg: Apple Watch ECG importer/summary/digest-line (electrocardiograms/ export members).
     p_ecg = sub.add_parser("ecg", help="Apple Watch ECG importer/summary (electrocardiograms export)")
@@ -127,13 +187,13 @@ def _parse_args(argv):
     p_dig.add_argument("--date", help="Local day (YYYY-MM-DD)")
 
     p_bridge = ecg_sub.add_parser("import-bridge", help="Import ECG recordings from the bridge DB")
-    p_bridge.add_argument("--bridge", required=True, help="Path to the bridge SQLite DB")
+    p_bridge.add_argument("--bridge", help=_DB_HELP)
     p_bridge.add_argument("--db", required=True, help="SQLite DB path")
 
     # nutrition: food-log intake vs DRI
     p_nut = sub.add_parser("nutrition", help="Nutrition report: daily intake vs DRI")
-    p_nut.add_argument("--db", required=True, help="Path to the merged history SQLite")
-    p_nut.add_argument("--date", help="Local day (YYYY-MM-DD); defaults to Chicago today")
+    p_nut.add_argument("--db", help=_DB_HELP)
+    p_nut.add_argument("--date", help="Local day (YYYY-MM-DD); defaults to today in your configured time zone")
     p_nut.add_argument("--days", type=int, default=7, help="Window size in days")
     p_nut.add_argument("--dri", default=str(settings.package_data("dri.yaml")), help="Path to a DRI table (default: the shipped adult-male 31-50 table)")
     p_nut.add_argument("--labs", help="Path to labs.sqlite for cross-check")
@@ -141,8 +201,8 @@ def _parse_args(argv):
 
     # concerns: health concern findings
     p_con = sub.add_parser("concerns", help="Health concern findings")
-    p_con.add_argument("--db", required=True, help="Path to the bridge SQLite snapshot")
-    p_con.add_argument("--date", help="Local day (YYYY-MM-DD); defaults to Chicago today")
+    p_con.add_argument("--db", help=_DB_HELP)
+    p_con.add_argument("--date", help="Local day (YYYY-MM-DD); defaults to today in your configured time zone")
     p_con.add_argument("--json", action="store_true", help="Print JSON list of findings")
 
     # workouts: weekly summary and daily digest lines
@@ -150,18 +210,31 @@ def _parse_args(argv):
     wrt_sub = p_wrt.add_subparsers(dest="workouts_command", required=True)
 
     p_wl = wrt_sub.add_parser("weekly-line", help="Weekly workout summary line for --date")
-    p_wl.add_argument("--db", required=True, help="SQLite DB path")
+    p_wl.add_argument("--db", help=_DB_HELP)
     p_wl.add_argument("--date", required=True, help="Reference day (YYYY-MM-DD)")
 
     p_dl = wrt_sub.add_parser("digest-line", help="Digest line for --date")
-    p_dl.add_argument("--db", required=True, help="SQLite DB path")
+    p_dl.add_argument("--db", help=_DB_HELP)
     p_dl.add_argument("--date", required=True, help="Day (YYYY-MM-DD)")
 
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if args.command in ("daily", "baseline"):
+        # `<cmd> <db_path> <type_code>` (original form) or `<cmd> <type_code>` (database resolved).
+        if args.second is not None:
+            db_path, type_code = args.first, args.second
+        else:
+            db_path, type_code = None, args.first
+        if type_code is None:
+            parser.error("the following arguments are required: type_code")
+        args.db_path = args.db or db_path
+        args.type_code = type_code
+    elif args.command in ("coverage", "anomalies", "bp"):
+        args.db_path = args.db or args.db_path
+    return args
 
 
 def _load_report(db_path, window, baseline):
-    return analysis.build_report(db_path, window_days=window, baseline_days=baseline)
+    return analysis.build_report(_receiver_db(db_path), window_days=window, baseline_days=baseline)
 
 
 def cmd_coverage(args) -> int:
@@ -228,7 +301,7 @@ def cmd_anomalies(args) -> int:
             },
         }
 
-    result = anomalies.detect(args.db_path, config, date)
+    result = anomalies.detect(_receiver_db(args.db_path), config, date)
     flags: list[str] = []
     insufficient: list[str] = []
     for tc in sorted(result):
@@ -254,7 +327,7 @@ def cmd_bp(args) -> int:
     from . import bp
 
     date = args.date or _default_date()
-    for line in bp.report(args.db_path, date):
+    for line in bp.report(_receiver_db(args.db_path), date):
         print(line)
     return 0
 
@@ -277,7 +350,7 @@ def cmd_weekly(args) -> int:
                 config = yaml.safe_load(f) or {}
         else:
             config = {"timezone": settings.timezone_name(), "metrics": {}}
-    for line in weekly.report(args.db, config, date):
+    for line in weekly.report(_receiver_db(args.db), config, date):
         print(line)
     return 0
 
@@ -289,18 +362,19 @@ def _labs_dispatch(args) -> int:
     from . import labs
 
     sub = getattr(args, "labs_command")
+    labs_db = args.db or str(settings.labs_dir() / "labs.sqlite")
     if sub == "import":
-        return labs.cmd_import(args.zip_path, args.db)
+        return labs.cmd_import(args.zip_path, labs_db)
     if sub == "summary":
-        return labs.cmd_summary(args.db)
+        return labs.cmd_summary(labs_db)
     if sub == "trend":
-        return labs.cmd_trend(args.db, args.loinc)
+        return labs.cmd_trend(labs_db, args.loinc)
     if sub == "digest-line":
-        return labs.cmd_digest_line(args.db, args.date)
+        return labs.cmd_digest_line(labs_db, args.date)
     if sub == "import-json":
-        return labs.cmd_import_json(args.json_path, args.db)
+        return labs.cmd_import_json(args.json_path, labs_db)
     if sub == "import-bridge":
-        return labs.cmd_import_bridge(args.bridge, args.db)
+        return labs.cmd_import_bridge(_receiver_db(args.bridge), labs_db)
     return 1
 
 
@@ -318,7 +392,7 @@ def _ecg_dispatch(args) -> int:
     if sub == "digest-line":
         return ecg.cmd_digest_line(args.db, args.date)
     if sub == "import-bridge":
-        return ecg.cmd_import_bridge(args.bridge, args.db)
+        return ecg.cmd_import_bridge(_receiver_db(args.bridge), args.db)
     return 1
 
 
@@ -327,14 +401,15 @@ def _nutrition_dispatch(args) -> int:
     from . import nutrition
 
     date = args.date or _default_date()
+    db = _receiver_db(args.db)
     if args.json:
         j = nutrition.report_json(
-            args.db, args.dri, date, days=args.days, labs_db=args.labs
+            db, args.dri, date, days=args.days, labs_db=args.labs
         )
         print(json.dumps(j, indent=2))
     else:
         for line in nutrition.report(
-            args.db, args.dri, date, days=args.days, labs_db=args.labs
+            db, args.dri, date, days=args.days, labs_db=args.labs
         ):
             print(line)
     return 0
@@ -345,13 +420,15 @@ def _workouts_dispatch(args) -> int:
     from . import workouts
 
     sub = getattr(args, "workouts_command")
+    if sub in ("weekly-line", "digest-line"):
+        db = _receiver_db(args.db)
     if sub == "weekly-line":
-        line = workouts.weekly_line(args.db, args.date)
+        line = workouts.weekly_line(db, args.date)
         if line:
             print(line)
         return 0
     if sub == "digest-line":
-        line = workouts.digest_line(args.db, args.date)
+        line = workouts.digest_line(db, args.date)
         if line:
             print(line)
         return 0
@@ -393,8 +470,9 @@ def _modules_dispatch(args) -> int:
         if not modules.is_enabled(module.id):
             print(f"{module.title} is off. Turn it on first: health-insights modules enable {module.id}", file=sys.stderr)
             return 2
-        print("\n".join(module.report(args.db, args.date or _default_date())))
+        print("\n".join(module.report(_receiver_db(args.db), args.date or _default_date())))
         return 0
+    info_db = _receiver_db(args.db) if getattr(args, "db", None) else None
     print(f"{module.title} ({module.id}) - {'ON' if modules.is_enabled(module.id) else 'off'}")
     print(f"  {module.summary}")
     print(f"  Category: {module.category}")
@@ -408,9 +486,9 @@ def _modules_dispatch(args) -> int:
         print("  Act on these whatever the data says (urgent or emergency care):")
         for flag in module.red_flags:
             print(f"    - {flag}")
-    if getattr(args, "db", None):
-        info = modules.readiness(module.id, args.db)
-        print(f"  In {args.db}: have {', '.join(info['present']) or 'none'}; missing {', '.join(info['missing']) or 'none'}")
+    if info_db:
+        info = modules.readiness(module.id, info_db)
+        print(f"  In {info_db}: have {', '.join(info['present']) or 'none'}; missing {', '.join(info['missing']) or 'none'}")
     return 0
 
 
@@ -419,7 +497,7 @@ def _concerns_dispatch(args) -> int:
     from . import concerns
 
     date = args.date or _default_date()
-    results = concerns.evaluate(args.db, date)
+    results = concerns.evaluate(_receiver_db(args.db), date)
 
     if args.json:
         print(json.dumps([f.to_dict() for f in results], indent=2, ensure_ascii=False))
@@ -428,13 +506,20 @@ def _concerns_dispatch(args) -> int:
             print("✅ No concerns found")
         else:
             for f in results:
-                icon = concerns.LEVEL_ICONS.get(f.level, "?")
-                print(f"{icon} {f.title} — {f.evidence}")
+                print(concerns.format_line(f))
     return 0
 
 
 def main(argv=None) -> int:
     args = _parse_args(sys.argv[1:] if argv is None else argv)
+    try:
+        return _run(args)
+    except _DbError as exc:
+        print(exc, file=sys.stderr)
+        return 2
+
+
+def _run(args) -> int:
     if args.command == "demo":
         from . import demo
         demo.build(args.out, days=args.days)

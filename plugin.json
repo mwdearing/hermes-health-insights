@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "health-insights",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Deterministic, local-first analysis of your Apple Health data: weekly trends, concern checks, nutrition vs DRI, energy target and lab results, plus opt-in modules (GLP-1 monitoring, medication adherence). Skills drive the health-insights CLI; the code computes, the agent explains.",
   "homepage": "https://github.com/mwdearing/hermes-health-insights",
   "repository": "https://github.com/mwdearing/hermes-health-insights",

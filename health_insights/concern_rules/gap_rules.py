@@ -148,3 +148,70 @@ def data_gap_findings(
             ),
         )
     ]
+
+
+# ---------------------------------------------------------------------------
+# Store-level staleness
+# ---------------------------------------------------------------------------
+
+STALE_AFTER_DAYS = 3
+
+
+def store_staleness_findings(db_path: str, ref_date) -> list["Finding"]:
+    """Level-2 finding when the newest record of ANY kind is older than three days.
+
+    Independent of the per-metric 14-day rule: fires for any database that has at
+    least one sample, workout or sleep session, however short its history.
+    """
+    import sqlite3
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    from ..concerns import Finding  # late import to avoid circular import
+
+    _ref = Date.fromisoformat(ref_date) if isinstance(ref_date, str) else ref_date
+    zone = ZoneInfo(settings.timezone_name())
+
+    conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    try:
+        tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        if "samples" not in tables:
+            return []
+        newest: Optional[datetime] = None
+        for table in ("samples", "workouts", "sleep_sessions"):
+            if table not in tables:
+                continue
+            cols = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+            if "start_time" not in cols:
+                continue
+            row = conn.execute(
+                f"SELECT MAX(start_time) FROM {table} WHERE start_time IS NOT NULL AND start_time != ''"
+            ).fetchone()
+            norm = _normalize_ts(row[0]) if row else None
+            if not norm:
+                continue
+            dt = datetime.fromisoformat(norm)
+            if newest is None or dt > newest:
+                newest = dt
+    finally:
+        conn.close()
+
+    if newest is None:
+        return []
+    newest_date = newest.astimezone(zone).date()
+    age = (_ref - newest_date).days
+    if age <= STALE_AFTER_DAYS:
+        return []
+    return [
+        Finding(
+            id="store_stale",
+            level=2,
+            title=f"No new health data since {newest_date.isoformat()}",
+            evidence=f"newest record {age} days old",
+            source="heuristic",
+            advice=(
+                "Check that the phone app is still syncing and that the receiver is running; "
+                "until data flows again, the other checks only see old records."
+            ),
+        )
+    ]

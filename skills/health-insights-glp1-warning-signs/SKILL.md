@@ -1,6 +1,6 @@
 ---
 name: health-insights-glp1-warning-signs
-description: Use when someone on a GLP-1 type medicine describes symptoms or asks what to watch for - lists the warning signs that need urgent care versus a prompt clinician conversation, and how to respond without diagnosing or giving medication advice.
+description: GLP-1 medicine warning signs - symptoms needing urgent care versus a prompt clinician conversation, and how to respond without diagnosing or advising on medication.
 license: Apache-2.0
 ---
 

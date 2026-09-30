@@ -96,6 +96,16 @@ def nutrition_gap_findings(
     evidence_parts = [f"{label} {pct}% of target" for label, pct in candidates]
     evidence = "; ".join(evidence_parts)
 
+    n = len(candidates)
+    if n == 1:
+        nutrient_word = "one nutrient"
+        pronoun = "its"
+    else:
+        nutrient_word = f"{n} nutrients"
+        pronoun = "their"
+
+    table_label = nutrition._dri_table("", dri_cfg)["label"]
+
     return [
         Finding(
             id="nutrition_gap",
@@ -104,10 +114,11 @@ def nutrition_gap_findings(
             evidence=evidence,
             source="heuristic (DRI comparison)",
             advice=(
-                "Your food log shows several nutrients averaging below 70 % of "
-                "their recommended intake. This isn't an emergency, but if it "
-                "persists it's worth raising with your clinician or adjusting "
-                "your diet."
+                f"Your food log shows {nutrient_word} averaging below 70 % of "
+                f"{pronoun} recommended amount (28-day average, compared with "
+                f"the Dietary Reference Intakes for {table_label}). This isn't "
+                f"an emergency, but if it persists it's worth raising with your "
+                f"clinician or adjusting your diet."
             ),
         )
     ]

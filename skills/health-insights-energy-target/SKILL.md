@@ -1,6 +1,6 @@
 ---
 name: health-insights-energy-target
-description: Use when the user asks what their daily calorie target is or how their intake compares - explains the IOM Estimated Energy Requirement used by health-insights and how to change activity level and goal.
+description: Daily calorie target - the IOM Estimated Energy Requirement used by health-insights, and how activity level and goal change it.
 license: Apache-2.0
 ---
 

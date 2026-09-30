@@ -1,6 +1,6 @@
 ---
 name: health-insights-glp1-monitoring
-description: Use when the user takes, or is considering, a GLP-1 type medicine (semaglutide, tirzepatide, liraglutide or an investigational incretin agonist) and wants their own Apple Health data checked for patterns worth knowing about. Opt-in module; explains findings, never advises on medication.
+description: GLP-1 medicine monitoring - opt-in module that checks your own Apple Health data for patterns worth knowing about; explains findings, never advises on medication.
 license: Apache-2.0
 compatibility: Needs the health-insights CLI and a HealthRelay/Health Bridge receiver database. Best with weight, resting heart rate, food log and blood pressure data.
 ---
@@ -10,7 +10,7 @@ compatibility: Needs the health-insights CLI and a HealthRelay/Health Bridge rec
 This is an OPT-IN module. Check `health-insights modules list`; if `glp1` is off, explain what it does (`modules info glp1`) and turn it on only if the user asks (see the `health-insights-modules` skill).
 
 ## What it does
-`health-insights modules report glp1 --db <db> [--date YYYY-MM-DD]` prints measurements, "worth a look" findings, data gaps, and the warning-sign lists. The same checks also feed `health-insights concerns`. All comparisons use the user's OWN baselines (mostly the prior 28 days) and need persistence over several days, so one odd reading does not fire anything.
+`health-insights modules report glp1 [--date YYYY-MM-DD]` (database from the setup; `--db <path>` only to override) prints measurements, "worth a look" findings, data gaps, and the warning-sign lists. The same checks also feed `health-insights concerns`. All comparisons use the user's OWN baselines (mostly the prior 28 days) and need persistence over several days, so one odd reading does not fire anything.
 
 | Finding id | What it looks at | Wording level |
 | --- | --- | --- |

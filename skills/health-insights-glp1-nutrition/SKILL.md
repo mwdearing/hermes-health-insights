@@ -1,6 +1,6 @@
 ---
 name: health-insights-glp1-nutrition
-description: Use for nutrition, hydration, protein, muscle and body-composition questions while someone takes a GLP-1 type medicine - what the research says, what the food log and smart scale can and cannot show.
+description: GLP-1 medicine nutrition, protein, hydration and muscle - what research says and what the food log and smart scale can and cannot show.
 license: Apache-2.0
 ---
 
@@ -15,7 +15,7 @@ Evidence summary (research notes cite trials and a 2025 joint nutrition advisory
 - Rapid weight loss is linked to gallstones; there is no validated kg-per-week threshold.
 - After stopping, about two thirds of the lost weight is regained within a year on average; that is a maintenance topic, not an alert.
 
-What the data can show (use `health-insights nutrition --db <db> --days 28`, `health-insights modules report glp1 --db <db>`):
+What the data can show (use `health-insights nutrition --days 28`, `health-insights modules report glp1`):
 - Logged protein per kg, average energy, days of very low intake, fibre and micronutrients against the reference table.
 - Weight trend, and lean/fat share if a smart scale reports body composition.
 

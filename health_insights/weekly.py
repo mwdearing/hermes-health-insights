@@ -114,8 +114,7 @@ def _metric_line(tc: str, label: str, unit: str, ref_date: str, series: dict[str
     recent_days = len(recent)
     # Fewer than MIN_RECENT_DAYS of the recent window have data -> insufficient, no direction.
     if recent_days < MIN_RECENT_DAYS:
-        return (f"{label}: 7d {_fmt(recent_mean)} {unit} vs 28d {_fmt(baseline_median)} "
-                f"{unit} (insufficient ({recent_days} of {RECENT_DAYS} days))")
+        return f"{label}: not enough data ({recent_days} of {RECENT_DAYS} days)"
 
     direction = _direction(recent_mean, baseline_vals) if len(baseline_vals) >= MIN_BASELINE_DAYS else "flat"
     sign = "+" if (recent_mean - baseline_median) >= 0 else "-"
@@ -124,7 +123,7 @@ def _metric_line(tc: str, label: str, unit: str, ref_date: str, series: dict[str
     if tc == "weight":
         wu = weight_unit()
         return (f"{label}: 7d {_fmt(to_display_weight(recent_mean))} {wu} vs 28d {_fmt(to_display_weight(baseline_median))} "
-                f"{wu} ({to_display_weight(change):.1f}, {direction})")
+                f"{wu} ({sign}{to_display_weight(change):.1f}, {direction})")
 
     if tc == "oxygen_saturation":
         # Stored as a fraction; render as a percent. Recompute sign/change after scaling.

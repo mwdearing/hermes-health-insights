@@ -249,7 +249,7 @@ class TestSupplementCandidates:
     def test_supplement_candidates_list(self, tmp_path):
         db = _build_db(tmp_path / "db.sqlite")
         lines = nutrition.report(db, DRI_SMALL, REF.isoformat())
-        sup = _line("\n".join(lines), "Supplement candidates")
+        sup = _line("\n".join(lines), "Consistently below target")
         assert sup, f"Expected a supplement candidates line: {lines}"
         assert "Calcium" in sup, f"Expected Calcium: {sup}"
         assert "Vitamin C" in sup, f"Expected Vitamin C: {sup}"
@@ -401,7 +401,7 @@ def test_not_tracked_never_lists_a_nutrient_that_has_rows_and_candidates_never_l
     db = _build_db(tmp_path / "db.sqlite")
     text = "\n".join(nutrition.report(db, _dri_path(tmp_path), REF.isoformat()))
     nt = _line(text, "Not tracked")
-    sup = _line(text, "Supplement candidates")
+    sup = _line(text, "Consistently below target")
     assert "Calcium" not in nt and "Iron" not in nt and "Vitamin C" not in nt, nt
     assert "Vitamin D" in nt and "Vitamin B12" in nt and "Magnesium" in nt, nt
     assert "Vitamin D" not in sup and "Magnesium" not in sup, sup
@@ -424,7 +424,7 @@ def test_candidate_needs_low_intake_on_at_least_low_days_logged_days(tmp_path):
     con.commit(); con.close()
     text = "\n".join(nutrition.report(db, _dri_path(tmp_path), REF.isoformat()))
     assert "low on 2 of 6" in _line(text, "Calcium"), _line(text, "Calcium")
-    assert "Calcium" not in _line(text, "Supplement candidates"), _line(text, "Supplement candidates")
+    assert "Calcium" not in _line(text, "Consistently below target"), _line(text, "Consistently below target")
 
 
 def test_long_lists_wrap_to_160_characters_without_losing_names(tmp_path):
@@ -510,9 +510,9 @@ def test_energy_line_mifflin_st_jeor_82pct(tmp_path):
     assert "Mifflin" in e, e
     assert "1.4" in e, e
     assert "40" in e, e
-    # Energy line must be second (index 1), right after header
+    # Energy line comes right after the header and the "Reference:" line (index 2)
     idx = lines.index(e)
-    assert idx == 1, f"Energy line at index {idx}, expected 1"
+    assert idx == 2, f"Energy line at index {idx}, expected 2"
 
 
 def test_energy_under_logging_note(tmp_path):

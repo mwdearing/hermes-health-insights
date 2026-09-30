@@ -448,3 +448,87 @@ def test_cli_json_output():
     assert len(data) > 0
     assert set(data[0]).issuperset({"id", "level", "title", "evidence", "source", "advice"})
     assert data[0]["id"] == "bp_severe"
+
+
+# ---------------------------------------------------------------------------
+# Report safety: nothing ran must never look like an all-clear (1.4)
+# ---------------------------------------------------------------------------
+
+
+def test_evaluate_missing_database_is_one_unavailable_finding(tmp_path):
+    from health_insights.concerns import evaluate
+
+    findings = evaluate(str(tmp_path / "nope.sqlite"), "2030-06-30")
+    assert [f.id for f in findings] == ["concerns_unavailable"]
+    f = findings[0]
+    assert f.level == 2
+    assert f.title == "Health checks could not run"
+    assert "nope.sqlite" in f.evidence
+    assert f.advice == (
+        "Nothing was checked this time. Fix the database path or sync, then run the check again."
+    )
+
+
+def test_evaluate_non_sqlite_file_is_one_unavailable_finding(tmp_path):
+    from health_insights.concerns import evaluate
+
+    bad = tmp_path / "junk.sqlite"
+    bad.write_text("this is not a database, just text " * 20)
+    findings = evaluate(str(bad), "2030-06-30")
+    assert [f.id for f in findings] == ["concerns_unavailable"]
+    assert findings[0].level == 2
+
+
+def test_evaluate_majority_of_rules_raising_collapses_to_unavailable(tmp_path, monkeypatch):
+    from health_insights import concerns, modules
+    from health_insights.concerns import evaluate
+
+    db = tmp_path / "ok.sqlite"
+    sqlite3.connect(db).close()
+
+    def boom(_db, _ref):
+        raise RuntimeError("x")
+
+    def fine(_db, _ref):
+        return []
+
+    monkeypatch.setattr(concerns, "DEFAULT_RULES", [("a", boom), ("b", boom), ("c", fine)])
+    monkeypatch.setattr(modules, "module_rules", lambda: [])
+    findings = evaluate(str(db), "2030-06-30")
+    assert [f.id for f in findings] == ["concerns_unavailable"]
+    assert "2 of 3" in findings[0].evidence
+
+
+def test_evaluate_isolated_rule_failure_keeps_per_rule_finding(tmp_path, monkeypatch):
+    from health_insights import concerns, modules
+    from health_insights.concerns import evaluate
+
+    db = tmp_path / "ok.sqlite"
+    sqlite3.connect(db).close()
+
+    def boom(_db, _ref):
+        raise RuntimeError("x")
+
+    def fine(_db, _ref):
+        return []
+
+    monkeypatch.setattr(concerns, "DEFAULT_RULES", [("a", boom), ("b", fine), ("c", fine)])
+    monkeypatch.setattr(modules, "module_rules", lambda: [])
+    findings = evaluate(str(db), "2030-06-30")
+    assert [f.id for f in findings] == ["a_error"]
+
+
+# ---------------------------------------------------------------------------
+# Concerns text shows the level (1.10)
+# ---------------------------------------------------------------------------
+
+
+def test_format_line_starts_with_icon_and_level_word():
+    from health_insights.concerns import Finding, format_line
+
+    def mk(level):
+        return Finding(id="x", level=level, title="T", evidence="E", source="s", advice="a")
+
+    assert format_line(mk(1)) == "👀 [worth watching] T — E"
+    assert format_line(mk(2)) == "⚠️ [discuss with a clinician] T — E"
+    assert format_line(mk(3)) == "🚨 [urgent] T — E"

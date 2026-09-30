@@ -30,4 +30,4 @@ A module is one entry in `health_insights/modules.py` plus its rules and skill:
 | id | What it does | Needs |
 | --- | --- | --- |
 | `glp1` | Watches your own data for patterns worth knowing about on a GLP-1 type medicine, plus warning signs. Details: [GLP1_MONITORING.md](GLP1_MONITORING.md) | weight, resting heart rate, food log; blood pressure and glucose if you have them |
-| `medication_adherence` | Flags repeated missed doses from a separate `medlog` tool (counts only) | the `medlog` command line tool |
+| `medication_adherence` | Flags repeated missed doses from a separate `medlog` tool (counts only) | the `medlog` command line tool (separate, not included with this plugin) |

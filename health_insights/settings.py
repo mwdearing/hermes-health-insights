@@ -116,9 +116,32 @@ def cards_dir() -> Path:
     return data_dir() / "cards"
 
 
+def config_path() -> Path:
+    """The config file this process reads (shown in error messages)."""
+    return _config_path()
+
+
+def healthrelay_db_path_file() -> Path:
+    """~/.config/healthrelay/db-path, shared with the healthrelay plugin's launcher."""
+    return Path.home() / ".config" / "healthrelay" / "db-path"
+
+
+def _db_path_from_file() -> str | None:
+    try:
+        lines = healthrelay_db_path_file().read_text().splitlines()
+    except (OSError, UnicodeDecodeError):
+        return None
+    return lines[0].strip() or None if lines else None
+
+
 def bridge_db() -> str | None:
-    """Path of the receiver's live database, or None when not configured."""
-    return os.environ.get("HEALTH_INSIGHTS_BRIDGE_DB") or _config().get("bridge_db") or None
+    """Path of the receiver's live database, or None when not configured.
+
+    Order: HEALTH_INSIGHTS_BRIDGE_DB, `bridge_db` in the config file, then the first line of
+    ~/.config/healthrelay/db-path.
+    """
+    return (os.environ.get("HEALTH_INSIGHTS_BRIDGE_DB") or _config().get("bridge_db")
+            or _db_path_from_file() or None)
 
 
 def _truthy(value) -> bool:

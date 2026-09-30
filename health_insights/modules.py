@@ -131,7 +131,7 @@ def readiness(module_id: str, db_path: str) -> dict:
 register(Module(
     id="medication_adherence",
     title="Medication adherence",
-    summary="Adds a concern when the medlog CLI shows repeatedly missed doses (counts only, never names or doses).",
+    summary="needs the medlog CLI (not included) to flag repeatedly missed doses (counts only, never names or doses).",
     category="medication",
     data_needs=(),
     rules=(),  # the rule itself lives in the core list and checks this switch

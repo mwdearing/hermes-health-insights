@@ -1,15 +1,16 @@
 ---
 name: health-insights-concerns-check
-description: Use to check Apple Health data for things worth attention - out-of-range blood pressure, SpO2/ECG, resting heart rate, HRV, sleep, labs, workouts, data gaps and nutrition gaps - via the health-insights concern rules.
+description: Health concerns check - rule-based findings (levels 1 to 3) for blood pressure, SpO2/ECG, vitals, sleep, labs, workouts, data gaps and nutrition gaps.
 license: Apache-2.0
 ---
 
 # Health concerns check
 
-1. Run `health-insights concerns --db <bridge.sqlite> [--date YYYY-MM-DD] [--json]`.
-2. Findings have a level: 1 worth watching, 2 worth discussing with a clinician, 3 urgent. Lead with the highest level and keep that order.
-3. Explain each finding in plain language using only its own evidence text. Do not add causes, diagnoses or treatment.
+1. Run `health-insights concerns --json [--date YYYY-MM-DD]`. The database comes from the setup (see `health-insights-setup`); add `--db <path>` only to override it. The plain-text form (`👀 [worth watching] title - evidence`) carries the same information, but JSON is exact.
+2. Each finding has `level`, `title`, `evidence` and `advice`. Levels: 1 worth watching, 2 worth discussing with a clinician, 3 urgent. Lead with the highest level and keep that order.
+3. Explain each finding in plain language using only its `evidence` and `advice` text. Do not add causes, diagnoses or treatment.
 4. For level 3, say plainly that it warrants prompt medical attention (or emergency care if the user has symptoms) rather than waiting for the next check.
-5. If nothing is flagged, say so and mention any data gaps the rules reported.
+5. Findings with ids `concerns_unavailable` or `store_stale` mean the check could not run fully or the newest data is old. Say that first: the absence of other findings then does NOT mean things look fine.
+6. If nothing is flagged, say so and mention any data gaps the rules reported. If the command exits with an error (status 2), tell the user the database is not set up and follow `health-insights-setup`.
 
 Rules are deterministic thresholds, not clinical judgement. They can be wrong or miss things. Informational only, not medical advice.

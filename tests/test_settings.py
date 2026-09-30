@@ -115,3 +115,10 @@ def test_shipped_config_files_live_inside_the_package():
     for name in ("health_monitor.yaml", "dri.yaml"):
         path = settings.package_data(name)
         assert path.is_file() and "health_insights" in str(path), path
+
+
+@pytest.fixture(autouse=True)
+def _no_real_db_path_file(monkeypatch, tmp_path_factory):
+    """bridge_db() falls back to ~/.config/healthrelay/db-path: never read the real one."""
+    monkeypatch.setenv("HOME", str(tmp_path_factory.mktemp("home")))
+    settings.reset()

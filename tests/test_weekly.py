@@ -157,10 +157,10 @@ def test_spo2_percent(tmp_path):
 
 
 def test_insufficient_two_of_seven(tmp_path):
-    """A metric with only 2 recent days reports 'insufficient (2 of 7 days)'."""
+    """A metric with only 2 recent days reports 'not enough data (2 of 7 days)'."""
     db = _full_db(tmp_path / "db.sqlite")
     line = _line("\n".join(weekly.report(db, CONFIG, REF)), "Heart rate")
-    assert "insufficient" in line
+    assert "not enough data" in line
     assert "2 of 7 days" in line
 
 
@@ -337,3 +337,26 @@ def test_implausible_weight_sample_does_not_drag_the_daily_mean(tmp_path):
            "metrics": {"weight": {"anomaly": {"min_abs": 30, "max_abs": 400}}}}
     vals = weekly._daily_values(str(path), cfg, "weight", CHI)
     assert vals[d] == pytest.approx(95.5)
+
+
+# ---------------------------------------------------------------------------
+# Insufficient data shows no numbers; consistent signs (1.6)
+# ---------------------------------------------------------------------------
+
+
+def test_insufficient_line_has_no_numbers_or_units(tmp_path):
+    db = _full_db(tmp_path / "db.sqlite")
+    line = _line("\n".join(weekly.report(db, CONFIG, REF)), "Heart rate")
+    assert line == "Heart rate: not enough data (2 of 7 days)"
+
+
+def test_insufficient_weight_line_shows_no_zero(tmp_path):
+    db = _build_db(tmp_path / "w.sqlite", sleep=False, samples=[("weight", "2030-06-29", 80.0, "kg")])
+    line = _line("\n".join(weekly.report(db, CONFIG, REF)), "Weight")
+    assert line == "Weight: not enough data (1 of 7 days)"
+
+
+def test_weight_delta_carries_a_sign(tmp_path):
+    db = _full_db(tmp_path / "db.sqlite")
+    line = _line("\n".join(weekly.report(db, CONFIG, REF)), "Weight")
+    assert re.search(r"\([+-]\d+\.\d, (up|down|flat)\)", line), line
