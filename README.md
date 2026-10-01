@@ -23,7 +23,7 @@ Two steps: the plugin adds skills to your agent; the analysis tool is installed 
 
 1. Install the tool and try it on synthetic data (no health data involved):
    ```bash
-   pipx install git+https://github.com/mwdearing/hermes-health-insights
+   pipx install git+https://github.com/mwdearing/hermes-health-insights@<sha>   # 40-character sha of the release you want
    health-insights --version
    health-insights demo --out demo.sqlite
    health-insights weekly --db demo.sqlite
