@@ -11,7 +11,7 @@ The plugin only holds skills. The analysis code is the `health-insights` command
 
 1. **Is the tool installed?** Run `health-insights --version`.
    - Expected: `health-insights <version>`.
-   - If "command not found": `pipx install git+https://github.com/mwdearing/hermes-health-insights` (or `uv tool install` / a venv), then run `--version` again.
+   - If "command not found": install it from this plugin's own copy, which Hermes already fetched at the installed commit: `pipx install "${HERMES_HOME:-$HOME/.hermes}/plugins/health-insights"` (or `uv tool install` / a venv from the same path), then run `--version` again. Do not install from the repository's latest commit.
 2. **Try it on synthetic data** (no health data involved): `health-insights demo --out demo.sqlite`, then `health-insights weekly --db demo.sqlite`.
    - Expected: a "Weekly health ..." report with a line per metric.
 3. **Set the database once** (the file the HealthRelay receiver writes; see the `healthrelay` plugin's setup skill). Use a COPY or the live file read-only; never write to it. The tool looks in this order and uses the first that is set:
