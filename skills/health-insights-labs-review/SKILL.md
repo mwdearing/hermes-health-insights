@@ -6,6 +6,8 @@ license: Apache-2.0
 
 # Lab results review
 
+**First, run `health-insights doctor`.** If it exits 2, show its output to the user and stop. Never look for a database or write SQL yourself: the receiver database is the one `doctor` prints (set once with `bridge_db`; see `health-insights-setup`), and `--db` is only an override. Exit 1 means the data is stale or sparse: say so before reporting anything, because missing numbers then do not mean a normal day.
+
 Lab results live in their own small SQLite file. For `labs` commands `--db` means that labs file, and it defaults to `<data_dir>/labs/labs.sqlite` (usually `~/.local/share/health-insights/labs/labs.sqlite`), so it is normally not needed.
 
 - Import from an Apple Health export: `health-insights labs import export_YYYY-MM-DD.zip` (reads only `clinical-records`; the zip is not unpacked).

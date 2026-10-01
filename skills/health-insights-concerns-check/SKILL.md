@@ -6,6 +6,8 @@ license: Apache-2.0
 
 # Health concerns check
 
+**First, run `health-insights doctor`.** If it exits 2, show its output to the user and stop. Never look for a database or write SQL yourself: the receiver database is the one `doctor` prints (set once with `bridge_db`; see `health-insights-setup`), and `--db` is only an override. Exit 1 means the data is stale or sparse: say so before reporting anything, because missing numbers then do not mean a normal day.
+
 1. Run `health-insights concerns --json [--date YYYY-MM-DD]`. The database comes from the setup (see `health-insights-setup`); add `--db <path>` only to override it. The plain-text form (`👀 [worth watching] title - evidence`) carries the same information, but JSON is exact.
 2. Each finding has `level`, `title`, `evidence` and `advice`. Levels: 1 worth watching, 2 worth discussing with a clinician, 3 urgent. Lead with the highest level and keep that order.
 3. Explain each finding in plain language using only its `evidence` and `advice` text. Do not add causes, diagnoses or treatment.

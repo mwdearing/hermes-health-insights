@@ -50,7 +50,11 @@ Set the receiver database once; after that no command needs `--db`. The tool use
 3. `bridge_db:` in `~/.config/health-insights/config.yaml`
 4. the first line of `~/.config/healthrelay/db-path` (the same file the [hermes-healthrelay](https://github.com/mwdearing/hermes-healthrelay) plugin reads, so one setting serves both)
 
-Check it with `health-insights concerns`. If the database cannot be opened, the tool prints one line saying so and exits with status 2. The rest of `config.yaml` is optional (timezone, weight unit, data directory, energy profile).
+Check it with `health-insights doctor`. If the database cannot be opened, the tool prints one line saying so and exits with status 2. The rest of `config.yaml` is optional (timezone, weight unit, data directory, energy profile).
+
+
+## Troubleshooting
+Run `health-insights doctor` first. It prints where the configuration came from, the receiver database it resolved (found, not empty, readable, opened read-only) and, for each metric the skills use, the newest sample date and how many of the last 30 days have data. Exit codes: 0 OK, 1 warning (newest data older than `--stale-days`, default 3, or `stale_days` in the config; or a metric with no data in 30 days), 2 error (database not configured, missing, a 0-byte file or not a bridge database); `--json` for machines. A wrong or empty path is an error, never an empty report: fix `bridge_db` instead of looking for another database.
 
 ## Uninstall
 ```bash

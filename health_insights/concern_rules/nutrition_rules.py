@@ -56,10 +56,9 @@ def nutrition_gap_findings(
     end = ref
     daily = nutrition._daily_sums(db_path, start, end)
 
-    # Logged days = days with dietary_energy_consumed > 0
-    logged_day_strings = [
-        d for d, vals in daily.items() if vals.get("dietary_energy_consumed", 0) > 0
-    ]
+    # Logged days: same definition as nutrition.report_json (any dietary sample on the day).
+    logged_day_strings, _partial = nutrition._classify_days(
+        daily, rules_cfg.get("partial_day_kcal", 1200))
 
     # For each nutrient key, count own-days with a non-zero value.
     nutrient_own_days: dict[str, int] = {}

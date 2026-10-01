@@ -144,6 +144,17 @@ def bridge_db() -> str | None:
             or _db_path_from_file() or None)
 
 
+def stale_days() -> int:
+    """Warn threshold for `health-insights doctor`: HEALTH_INSIGHTS_STALE_DAYS, `stale_days` in the config, else 3."""
+    raw = os.environ.get("HEALTH_INSIGHTS_STALE_DAYS")
+    if raw:
+        try:
+            raw = int(raw)
+        except ValueError:
+            raw = None
+    return _bounded_int(raw if raw else _config().get("stale_days"), 3, 365)
+
+
 def _truthy(value) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes", "on"}
 

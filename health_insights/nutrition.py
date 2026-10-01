@@ -39,8 +39,29 @@ def _load_dri(dri_path_or_yaml: str) -> dict:
     else:
         with open(dri_path_or_yaml, encoding="utf-8") as f:
             cfg = yaml.safe_load(f)
+    _normalize_dri_rows(cfg)
     cfg.update(settings.profile())
     return cfg
+
+
+_UL_SCOPES = ("food+supplements", "supplements")
+_WINDOWS = ("daily",)
+
+
+def _normalize_dri_rows(cfg: dict) -> None:
+    """Validate and default the structured reference fields on every nutrient row (older files lack them)."""
+    for key, row in (cfg.get("nutrients") or {}).items():
+        if not isinstance(row, dict):
+            continue
+        row.setdefault("population", cfg.get("group"))
+        row.setdefault("form", "any")
+        row.setdefault("ul_scope", "food+supplements")
+        row.setdefault("window", "daily")
+        row.setdefault("review_date", None)
+        if row["ul_scope"] not in _UL_SCOPES:
+            raise ValueError(f"DRI nutrient {key!r}: unknown ul_scope {row['ul_scope']!r} (allowed: {', '.join(_UL_SCOPES)})")
+        if row["window"] not in _WINDOWS:
+            raise ValueError(f"DRI nutrient {key!r}: unknown window {row['window']!r} (allowed: {', '.join(_WINDOWS)})")
 
 
 def _chicago_to_utc(dt: datetime) -> datetime:
@@ -170,6 +191,35 @@ def _estimated_need(dri: dict, weight_kg: float, height_cm: float) -> tuple[int,
 
 
 
+def _classify_days(daily: dict, partial_kcal: float) -> tuple[list[str], list[str]]:
+    """(logged, partial) day lists. A day is LOGGED when it has any dietary_* sample, so a supplement-only
+    day and a zero-energy day count (they were dropped when `energy > 0` decided). A logged day is PARTIAL
+    when its food energy is unknown (no energy row) or below `partial_kcal`; the rest are adequately logged."""
+    logged: list[str] = []
+    partial: list[str] = []
+    for day_str, values in sorted(daily.items()):
+        if not values:
+            continue
+        logged.append(day_str)
+        energy = values.get("dietary_energy_consumed")
+        if energy is None or energy < partial_kcal:
+            partial.append(day_str)
+    return logged, partial
+
+
+def _known_days(daily: dict, logged_days: list[str], apple: str) -> list[str]:
+    """Logged days on which `apple` has a row. No row means UNKNOWN for that day, never zero."""
+    return [d for d in logged_days if apple in daily.get(d, {})]
+
+
+def _known_avg(daily: dict, logged_days: list[str], apple: str) -> tuple[Optional[float], int]:
+    """(average over the days the value is known, number of those days); (None, 0) when never recorded."""
+    known = _known_days(daily, logged_days, apple)
+    if not known:
+        return None, 0
+    return sum(daily[d][apple] for d in known) / len(known), len(known)
+
+
 def _tracked_keys(daily: dict[str, dict[str, float]], dri: dict) -> set[str]:
     """Nutrient keys whose Apple type has at least one row in the window (on any day)."""
     present = set()
@@ -197,7 +247,7 @@ def _low_counts(daily: dict, logged_days: list[str], dri: dict, weight_kg: Optio
         target = _effective_target(nut, weight_kg)
         if not apple or not target or target <= 0 or nut.get("type") in ("limit", "amdr", "none"):
             continue
-        out[key] = sum(1 for d in logged_days if daily.get(d, {}).get(apple, 0.0) < low_share * target)
+        out[key] = sum(1 for d in _known_days(daily, logged_days, apple) if daily[d][apple] < low_share * target)
     return out
 
 
@@ -243,12 +293,35 @@ def _format_line(
     dri: dict,
     logged_days: int,
     partial_days: int,
-    avg_energy: float = 0.0,
+    avg_energy: Optional[float] = 0.0,
     days: int = 7,
     low_count: Optional[int] = None,
+    known_days: Optional[int] = None,
 ) -> str:
     """Build a properly formatted nutrient line ('{days}d avg ...'); `low_count` is the number of logged
     days under low_share x target (None when the nutrient has no target)."""
+    # `known_days`: logged days that have a value for this nutrient (default all); fewer shows coverage and
+    # makes the "low on N of M" denominator the known days.
+    line = _format_line_core(
+        nutrient_key, info, avg, unit, dri, known_days if known_days is not None else logged_days,
+        partial_days, avg_energy, days, low_count)
+    if known_days is not None and known_days < logged_days:
+        line += f" (known on {known_days} of {logged_days} logged days)"
+    return line
+
+
+def _format_line_core(
+    nutrient_key: str,
+    info: dict,
+    avg: float,
+    unit: str,
+    dri: dict,
+    logged_days: int,
+    partial_days: int,
+    avg_energy: Optional[float],
+    days: int,
+    low_count: Optional[int],
+) -> str:
     nut = dri["nutrients"][nutrient_key]
     label = nut["label"]
     target = nut.get("target")
@@ -261,8 +334,10 @@ def _format_line(
     # ---- Saturated fat (energy share) ----
     if energy_share_max is not None:
         sat_kcal = avg * (kcal_per_unit or 9)
-        share_pct = round(sat_kcal / avg_energy * 100) if avg_energy > 0 else 0
         limit_pct = round(energy_share_max * 100)
+        if not avg_energy:
+            return f"{label}: {days}d avg {avg:.0f} g, energy share unknown vs {limit_pct}% limit"
+        share_pct = round(sat_kcal / avg_energy * 100)
         return f"{label}: {days}d avg {avg:.0f} g = {share_pct}% of energy vs {limit_pct}% limit"
 
     # ---- Limit type (sodium) ----
@@ -406,18 +481,11 @@ def report(
     # Get daily sums
     daily = _daily_sums(db_path, start, end)
 
-    # Identify logged days (have dietary_energy_consumed)
-    logged_days_list: list[str] = []
-    partial_days_list: list[str] = []
-    for day_str, values in sorted(daily.items()):
-        energy = values.get("dietary_energy_consumed", 0)
-        if energy > 0:
-            logged_days_list.append(day_str)
-            if energy < partial_kcal:
-                partial_days_list.append(day_str)
+    logged_days_list, partial_days_list = _classify_days(daily, partial_kcal)
 
     days_logged = len(logged_days_list)
     days_partial = len(partial_days_list)
+    days_adequate = days_logged - days_partial
 
     # Check for empty db
     if days_logged == 0:
@@ -434,13 +502,14 @@ def report(
         ]
 
     # Compute window averages
-    nutrient_avgs: dict[str, float] = {}
+    # Unknown is not zero: average each nutrient over the logged days that have a value for it.
+    nutrient_avgs: dict[str, Optional[float]] = {}
+    nutrient_known: dict[str, int] = {}
     for tc in dri_cfg["nutrients"]:
         apple = dri_cfg["nutrients"][tc].get("apple")
         if not apple:
             continue
-        total = sum(daily[d].get(apple, 0) for d in logged_days_list)
-        nutrient_avgs[tc] = total / days_logged
+        nutrient_avgs[tc], nutrient_known[tc] = _known_avg(daily, logged_days_list, apple)
 
     # Get weight for protein calculation
     weight_kg = _latest_weight(db_path, ref)
@@ -449,10 +518,7 @@ def report(
     low_counts = _low_counts(daily, logged_days_list, dri_cfg, weight_kg)
 
     # Compute average energy for saturated fat
-    total_energy = sum(
-        daily[d].get("dietary_energy_consumed", 0) for d in logged_days_list
-    )
-    avg_energy = total_energy / days_logged if days_logged > 0 else 0
+    avg_energy, energy_known = _known_avg(daily, logged_days_list, "dietary_energy_consumed")
 
     # Build header
     header = (
@@ -460,7 +526,7 @@ def report(
         f"{days_logged} of {days} days logged"
     )
     if days_partial > 0:
-        header += f", {days_partial} partial"
+        header += f", {days_partial} partial ({days_adequate} adequate)"
 
     lines: list[str] = [header]
 
@@ -479,7 +545,7 @@ def report(
     has_profile = bool(dri_cfg.get("age_years")) and bool(dri_cfg.get("sex"))
     if has_height and has_weight and has_profile:
         need_kcal, energy_inputs = _estimated_need(dri_cfg, energy_weight, height_cm)
-        pct = round(avg_energy / need_kcal * 100) if need_kcal > 0 else 0
+        pct = round(avg_energy / need_kcal * 100) if need_kcal > 0 and avg_energy is not None else 0
         body = f"{to_display_weight(energy_weight):.0f} {weight_unit()}, {height_cm:.0f} cm, age {dri_cfg.get('age_years', '??')}"
         if "pal" in energy_inputs:
             goal = energy_inputs["goal_kcal"]
@@ -490,13 +556,21 @@ def report(
                 what += f", Mifflin x PAL cross-check {energy_inputs['crosscheck_kcal']}"
         else:
             what = f"{need_kcal} kcal estimated need (Mifflin-St Jeor {body}, activity {dri_cfg.get('activity_factor', '??')})"
-        e_line = f"Energy: {days}d avg {avg_energy:.0f} kcal on logged days = {pct}% of {what}"
-        if pct < 70:
-            e_line += ", probably under-logging"
+        if avg_energy is None:
+            e_line = f"Energy: unknown (no food energy logged on any of the {days_logged} logged days); target {need_kcal} kcal"
+        else:
+            e_line = f"Energy: {days}d avg {avg_energy:.0f} kcal on logged days = {pct}% of {what}"
+            if pct < 70:
+                e_line += ", probably under-logging"
+        if avg_energy is not None and energy_known < days_logged:
+            e_line += f" (energy known on {energy_known} of {days_logged} logged days)"
         lines.append(e_line)
     else:
         missing = "height" if not has_height else "weight in the last 14 days" if not has_weight else "profile: set sex and age_years under profile in the config file"
-        lines.append(f"Energy: {days}d avg {avg_energy:.0f} kcal on logged days, estimate n/a (no {missing})")
+        if avg_energy is None:
+            lines.append(f"Energy: unknown (no food energy logged), estimate n/a (no {missing})")
+        else:
+            lines.append(f"Energy: {days}d avg {avg_energy:.0f} kcal on logged days, estimate n/a (no {missing})")
 
     # Report each nutrient in order (only those with a DRI target/ul/energy_share_max)
     for key, nut in dri_cfg["nutrients"].items():
@@ -505,13 +579,13 @@ def report(
             continue
         if nut.get("target") is None and nut.get("ul") is None and nut.get("energy_share_max") is None:
             continue  # no DRI comparison possible (e.g. total fat, cholesterol)
-        avg = nutrient_avgs.get(key, 0)
-        if avg <= 0:
-            continue
+        avg = nutrient_avgs.get(key)
+        if avg is None:
+            continue  # unknown on every logged day: never shown as zero
         unit = nut.get("unit", "")
         line = _format_line(
             key, info, avg, unit, dri_cfg, days_logged, days_partial, avg_energy,
-            days=days, low_count=low_counts.get(key),
+            days=days, low_count=low_counts.get(key), known_days=nutrient_known[key],
         )
         lines.append(line)
 
@@ -556,17 +630,11 @@ def report_json(
 
     daily = _daily_sums(db_path, start, end)
 
-    logged_days_list: list[str] = []
-    partial_days_list: list[str] = []
-    for day_str, values in sorted(daily.items()):
-        energy = values.get("dietary_energy_consumed", 0)
-        if energy > 0:
-            logged_days_list.append(day_str)
-            if energy < partial_kcal:
-                partial_days_list.append(day_str)
+    logged_days_list, partial_days_list = _classify_days(daily, partial_kcal)
 
     days_logged = len(logged_days_list)
     days_partial = len(partial_days_list)
+    days_adequate = days_logged - days_partial
 
     if days_logged == 0:
         return {
@@ -574,25 +642,24 @@ def report_json(
             "end": end.isoformat(),
             "days_logged": 0,
             "days_partial": 0,
+            "days_adequate": 0,
             "error": "no food log entries",
         }
 
     # Compute window averages
-    nutrient_avgs: dict[str, float] = {}
+    # Unknown is not zero: average each nutrient over the logged days that have a value for it.
+    nutrient_avgs: dict[str, Optional[float]] = {}
+    nutrient_known: dict[str, int] = {}
     for tc in dri_cfg["nutrients"]:
         apple = dri_cfg["nutrients"][tc].get("apple")
         if not apple:
             continue
-        total = sum(daily[d].get(apple, 0) for d in logged_days_list)
-        nutrient_avgs[tc] = total / days_logged
+        nutrient_avgs[tc], nutrient_known[tc] = _known_avg(daily, logged_days_list, apple)
 
     weight_kg = _latest_weight(db_path, ref)
     info: dict = {"weight_kg": weight_kg}
 
-    total_energy = sum(
-        daily[d].get("dietary_energy_consumed", 0) for d in logged_days_list
-    )
-    avg_energy = total_energy / days_logged if days_logged > 0 else 0
+    avg_energy, energy_known = _known_avg(daily, logged_days_list, "dietary_energy_consumed")
 
     # Build nutrients dict
     nutrients: dict[str, dict] = {}
@@ -600,9 +667,14 @@ def report_json(
         apple = nut.get("apple")
         if not apple:
             continue
-        avg = nutrient_avgs.get(key, 0)
+        avg = nutrient_avgs.get(key)
         unit = nut.get("unit", "")
         target = nut.get("target")
+        if avg is None:
+            # Unknown on every logged day: not a zero, not low, not ok.
+            nutrients[key] = {"avg": None, "unit": unit, "target": target, "pct": None,
+                              "status": "unknown", "days_known": 0}
+            continue
         pct = 0
         if target is not None and target > 0:
             if nut.get("per_kg") and weight_kg:
@@ -631,6 +703,7 @@ def report_json(
             "target": target,
             "pct": pct,
             "status": status,
+            "days_known": nutrient_known[key],
         }
 
     tracked = _tracked_keys(daily, dri_cfg)
@@ -645,10 +718,10 @@ def report_json(
     has_weight = energy_weight is not None
     has_profile = bool(dri_cfg.get("age_years")) and bool(dri_cfg.get("sex"))
     method = "iom_eer" if dri_cfg.get("pal") else "mifflin_st_jeor"
-    energy: dict[str, Any] = {"method": method, "avg_kcal": avg_energy}
+    energy: dict[str, Any] = {"method": method, "avg_kcal": avg_energy, "days_known": energy_known}
     if has_height and has_weight and has_profile:
         need_kcal, energy_inputs = _estimated_need(dri_cfg, energy_weight, height_cm)
-        pct = round(avg_energy / need_kcal * 100) if need_kcal > 0 else 0
+        pct = round(avg_energy / need_kcal * 100) if need_kcal > 0 and avg_energy is not None else None
         energy["estimated_need_kcal"] = need_kcal
         energy["pct"] = pct
         energy["inputs"] = energy_inputs
@@ -689,6 +762,7 @@ def report_json(
         "end": end.isoformat(),
         "days_logged": days_logged,
         "days_partial": days_partial,
+        "days_adequate": days_adequate,
         "dri_table": _dri_table(dri, dri_cfg),
         "nutrients": nutrients,
         "supplement_candidates": candidates,

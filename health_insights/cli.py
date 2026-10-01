@@ -46,6 +46,8 @@ def _db_problem(path: str) -> str | None:
         return "no such file"
     if os.path.isdir(path):
         return "it is a directory"
+    if os.path.getsize(path) == 0:
+        return "it is a 0-byte file, not a database"
     try:
         conn = connect_readonly(path)
         try:
@@ -115,6 +117,11 @@ def _parse_args(argv):
     p_bp.add_argument("db_path", nargs="?", help=_DB_HELP)
     _add_db_option(p_bp, "Same as the positional path")
     p_bp.add_argument("--date", help="Local day (YYYY-MM-DD); defaults to today in your configured time zone")
+
+    p_doc = sub.add_parser("doctor", help="Check the setup: config, database paths, data freshness (exit 0 ok, 1 warning, 2 error)")
+    p_doc.add_argument("--db", help=_DB_HELP)
+    p_doc.add_argument("--stale-days", type=int, help="Warn when the newest data is older than this many days (default 3, or stale_days in the config)")
+    p_doc.add_argument("--json", action="store_true", help="Print JSON document")
 
     p_demo = sub.add_parser("demo", help="Write a synthetic demo database (no real data) to try the commands")
     p_demo.add_argument("--out", required=True, help="Path of the SQLite file to create")
@@ -527,6 +534,9 @@ def _run(args) -> int:
         return 0
     if args.command == "modules":
         return _modules_dispatch(args)
+    if args.command == "doctor":
+        from . import doctor
+        return doctor.run(args.db, args.stale_days, args.json)
     if args.command == "coverage":
         return cmd_coverage(args)
     if args.command == "daily":

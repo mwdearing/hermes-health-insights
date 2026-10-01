@@ -7,6 +7,8 @@ compatibility: Needs the health-insights CLI and a HealthRelay/Health Bridge rec
 
 # GLP-1 / incretin monitoring
 
+**First, run `health-insights doctor`.** If it exits 2, show its output to the user and stop. Never look for a database or write SQL yourself: the receiver database is the one `doctor` prints (set once with `bridge_db`; see `health-insights-setup`), and `--db` is only an override. Exit 1 means the data is stale or sparse: say so before reporting anything, because missing numbers then do not mean a normal day.
+
 This is an OPT-IN module. Check `health-insights modules list`; if `glp1` is off, explain what it does (`modules info glp1`) and turn it on only if the user asks (see the `health-insights-modules` skill).
 
 ## What it does

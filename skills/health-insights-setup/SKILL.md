@@ -7,6 +7,8 @@ compatibility: Python 3.11+, PyYAML. Reads a HealthRelay / Health Bridge receive
 
 # health-insights setup
 
+**Once the tool is installed (step 1), run `health-insights doctor` after every change to the database path.** If it exits 2, show its output to the user and stop. Never look for a database or write SQL yourself: the receiver database is the one `doctor` prints (set once with `bridge_db`; see `health-insights-setup`), and `--db` is only an override. Exit 1 means the data is stale or sparse: say so before reporting anything, because missing numbers then do not mean a normal day.
+
 The plugin only holds skills. The analysis code is the `health-insights` command line tool, installed separately; the agent runs it and explains the output. Work through the checklist in order and confirm each expected output before moving on.
 
 1. **Is the tool installed?** Run `health-insights --version`.

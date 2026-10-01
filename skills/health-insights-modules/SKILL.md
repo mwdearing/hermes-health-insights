@@ -6,6 +6,8 @@ license: Apache-2.0
 
 # Optional modules
 
+**First, run `health-insights doctor`.** If it exits 2, show its output to the user and stop. Never look for a database or write SQL yourself: the receiver database is the one `doctor` prints (set once with `bridge_db`; see `health-insights-setup`), and `--db` is only an override. Exit 1 means the data is stale or sparse: say so before reporting anything, because missing numbers then do not mean a normal day.
+
 health-insights has a small set of core checks that always run, and OPTIONAL MODULES for specific situations (for example medication adherence, or monitoring while on a particular kind of medication). `medication_adherence` needs the separate `medlog` command line tool, which is not included; do not offer to enable it unless the user says they have that tool. Every optional module is OFF until the user turns it on. Never turn one on without being asked.
 
 Commands (all local, they only read and write a small settings file):

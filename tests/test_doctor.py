@@ -1,0 +1,170 @@
+"""health-insights doctor: loud errors for a wrong or empty database, counts and dates only. Synthetic data."""
+import json
+import sqlite3
+from datetime import datetime, timedelta, timezone
+
+import pytest
+
+from health_insights import cli, settings
+
+SCHEMA = (
+    "create table samples (sample_id integer primary key, source_id integer, type_code text, client_record_id text,"
+    " start_time text, end_time text, value real, unit text, metadata_json text);"
+    "create table sleep_sessions (sleep_session_id integer primary key, source_id integer, client_record_id text,"
+    " start_time text, end_time text);"
+)
+
+
+def _iso(days_ago, hour=12):
+    d = datetime.now(timezone.utc) - timedelta(days=days_ago)
+    return d.replace(hour=hour, minute=0, second=0, microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def make_db(path, days_by_type):
+    con = sqlite3.connect(path)
+    con.executescript(SCHEMA)
+    n = 0
+    for code, days in days_by_type.items():
+        for d in days:
+            n += 1
+            if code == "sleep":
+                con.execute("insert into sleep_sessions values (?,?,?,?,?)", (n, 1, f"s{n}", _iso(d, 4), _iso(d, 10)))
+                continue
+            con.execute("insert into samples values (?,?,?,?,?,?,?,?,?)",
+                        (n, 1, code, f"r{n}", _iso(d), _iso(d), 1.0, "u", "{}"))
+    con.commit()
+    con.close()
+
+
+@pytest.fixture(autouse=True)
+def _env(monkeypatch, tmp_path):
+    for k in ("HEALTH_INSIGHTS_BRIDGE_DB", "HEALTH_INSIGHTS_DB", "HEALTH_INSIGHTS_STALE_DAYS"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HEALTH_INSIGHTS_CONFIG", str(tmp_path / "config.yaml"))
+    monkeypatch.setenv("HOME", str(tmp_path))  # no ~/.config/healthrelay/db-path
+    settings.reset()
+    yield
+    settings.reset()
+
+
+def doctor(capsys, *argv):
+    code = cli.main(["doctor", *argv])
+    return code, capsys.readouterr()
+
+
+FULL = {c: range(0, 30) for c in ("resting_heart_rate", "heart_rate_variability_sdnn", "weight", "steps",
+                                   "blood_pressure_systolic", "hydration", "sleep")}
+
+
+def test_ok_exit_0(tmp_path, capsys):
+    db = tmp_path / "b.sqlite"
+    make_db(db, FULL)
+    code, out = doctor(capsys, "--db", str(db))
+    assert code == 0, out.out
+    assert "status: ok" in out.out
+    assert "opened_read_only: True" in out.out
+    assert "resting_heart_rate: last sample" in out.out
+
+
+def test_config_file_is_the_source(tmp_path, capsys, monkeypatch):
+    db = tmp_path / "b.sqlite"
+    make_db(db, FULL)
+    (tmp_path / "config.yaml").write_text(f"bridge_db: {db}\n")
+    settings.reset()
+    code, out = doctor(capsys)
+    assert code == 0
+    assert "config.yaml" in out.out and "[from bridge_db in" in out.out
+
+
+def test_unset_is_error_2(capsys):
+    code, out = doctor(capsys)
+    assert code == 2
+    assert "ERROR: bridge_db is not set" in out.out
+
+
+def test_missing_is_error_2(tmp_path, capsys):
+    code, out = doctor(capsys, "--db", str(tmp_path / "gone.sqlite"))
+    assert code == 2
+    assert "not found" in out.out
+
+
+def test_zero_byte_is_error_2_and_untouched(tmp_path, capsys):
+    db = tmp_path / "zero.sqlite"
+    db.write_bytes(b"")
+    code, out = doctor(capsys, "--db", str(db))
+    assert code == 2
+    assert "0-byte" in out.out
+    assert db.stat().st_size == 0
+
+
+def test_not_a_bridge_database_is_error_2(tmp_path, capsys):
+    db = tmp_path / "x.sqlite"
+    con = sqlite3.connect(db)
+    con.execute("create table other (a)")
+    con.commit()
+    con.close()
+    code, out = doctor(capsys, "--db", str(db))
+    assert code == 2
+    assert "no samples table" in out.out
+
+
+def test_garbage_file_is_error_2(tmp_path, capsys):
+    db = tmp_path / "junk.sqlite"
+    db.write_bytes(b"this is not sqlite" * 20)
+    code, out = doctor(capsys, "--db", str(db))
+    assert code == 2
+
+
+def test_stale_is_warning_1(tmp_path, capsys):
+    db = tmp_path / "b.sqlite"
+    make_db(db, {c: range(10, 40) for c in FULL})
+    code, out = doctor(capsys, "--db", str(db))
+    assert code == 1
+    assert "older than 3 days" in out.out
+
+
+def test_stale_days_option_and_env(tmp_path, capsys, monkeypatch):
+    db = tmp_path / "b.sqlite"
+    make_db(db, {c: range(5, 35) for c in FULL})
+    assert doctor(capsys, "--db", str(db))[0] == 1
+    assert doctor(capsys, "--db", str(db), "--stale-days", "10")[0] == 0
+    monkeypatch.setenv("HEALTH_INSIGHTS_STALE_DAYS", "10")
+    assert doctor(capsys, "--db", str(db))[0] == 0
+
+
+def test_sparse_metric_is_warning_1(tmp_path, capsys):
+    data = dict(FULL)
+    data["weight"] = [45]  # recorded long ago, nothing in the last 30 days
+    db = tmp_path / "b.sqlite"
+    make_db(db, data)
+    code, out = doctor(capsys, "--db", str(db))
+    assert code == 1
+    assert "weight: sparse" in out.out
+
+
+def test_path_with_question_mark_and_hash(tmp_path, capsys):
+    d = tmp_path / "we?ird #dir"
+    d.mkdir()
+    db = d / "b.sqlite"
+    make_db(db, FULL)
+    code, out = doctor(capsys, "--db", str(db))
+    assert code == 0, out.out
+
+
+def test_json_output(tmp_path, capsys):
+    db = tmp_path / "b.sqlite"
+    make_db(db, FULL)
+    code, out = doctor(capsys, "--db", str(db), "--json")
+    data = json.loads(out.out)
+    assert code == 0 and data["status"] == "ok"
+    assert data["bridge_db"]["opened_read_only"] is True
+    assert data["metrics"]["resting_heart_rate"]["days_with_data_30"] == 30
+    assert "value" not in json.dumps(data["metrics"])  # dates and counts only
+
+
+def test_coverage_refuses_a_zero_byte_database(tmp_path, capsys):
+    db = tmp_path / "zero.sqlite"
+    db.write_bytes(b"")
+    code = cli.main(["coverage", "--db", str(db)])
+    assert code == 2
+    assert "0-byte" in capsys.readouterr().err
