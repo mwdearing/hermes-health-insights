@@ -15,7 +15,6 @@ import json
 import os
 import re
 import sqlite3
-import urllib.parse
 import zipfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -23,6 +22,7 @@ from pathlib import Path
 from typing import Optional
 from zoneinfo import ZoneInfo
 from health_insights import settings
+from health_insights.sqlite_ro import connect_readonly
 
 CHI = settings.timezone()
 
@@ -383,9 +383,7 @@ def read_ecgs_bridge(bridge_db: str) -> tuple[list[EcgRecording], list[str]]:
     Opens the bridge READ-ONLY via a URI with the path percent-encoded.
     If the table is missing returns ([], []).
     """
-    abs_path = os.path.abspath(bridge_db)
-    encoded = urllib.parse.quote(abs_path)
-    conn = sqlite3.connect(f"file:{encoded}?mode=ro", uri=True)
+    conn = connect_readonly(bridge_db)
     try:
         # Check if table exists
         tbl = conn.execute(
@@ -547,7 +545,7 @@ def cmd_import_bridge(bridge_db: str, ecg_db: str) -> int:
 # ---- CLI helpers ----------------------------------------------------------
 
 def _open_ro(db_path: str) -> sqlite3.Connection:
-    return sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    return connect_readonly(db_path)
 
 
 def cmd_import(zip_path: str, db_path: str) -> int:

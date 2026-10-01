@@ -17,12 +17,13 @@ from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional
 from zoneinfo import ZoneInfo
 from health_insights import settings
+from health_insights.sqlite_ro import connect_readonly
 
 CHI = settings.timezone()
 
 
 def _open_ro(db_path: str) -> sqlite3.Connection:
-    return sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    return connect_readonly(db_path)
 
 
 def _query(conn: sqlite3.Connection, sql: str, params=()) -> list[tuple]:

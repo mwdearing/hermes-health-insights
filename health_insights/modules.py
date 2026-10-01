@@ -17,6 +17,7 @@ from typing import Callable
 import yaml
 
 from . import settings
+from health_insights.sqlite_ro import connect_readonly
 
 
 @dataclass(frozen=True)
@@ -119,7 +120,7 @@ def readiness(module_id: str, db_path: str) -> dict:
     module = get(module_id)
     present: list[str] = []
     try:
-        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+        conn = connect_readonly(db_path)
         have = {row[0] for row in conn.execute("SELECT DISTINCT type_code FROM samples")}
         conn.close()
     except sqlite3.Error:
@@ -141,3 +142,11 @@ register(Module(
 
 
 from .concern_rules import glp1_rules  # noqa: E402,F401  (registers the glp1 module)
+
+
+try:  # deployment-only module: its file is left out of the public export, so the import is optional
+    import importlib
+    importlib.import_module(f"{__package__}.weekly_injection_window")  # registers weekly_injection_window
+except ModuleNotFoundError as exc:
+    if exc.name != f"{__package__}.weekly_injection_window":
+        raise

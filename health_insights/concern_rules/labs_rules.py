@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import sqlite3
 from datetime import date as Date, timedelta
+from health_insights.sqlite_ro import connect_readonly
 
 
 def labs_findings(db_path: str, ref_date) -> list["Finding"]:
@@ -37,7 +38,7 @@ def labs_findings(db_path: str, ref_date) -> list["Finding"]:
         ref_date = Date.fromisoformat(ref_date)
 
     try:
-        con = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+        con = connect_readonly(db_path)
     except sqlite3.OperationalError:
         return []
 

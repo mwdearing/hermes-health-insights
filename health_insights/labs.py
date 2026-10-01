@@ -15,12 +15,12 @@ import json
 import os
 import re
 import sqlite3
-import urllib.parse
 import zipfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Optional
 from health_insights import settings
+from health_insights.sqlite_ro import connect_readonly
 
 # ---- DB paths / modes -----------------------------------------------------
 
@@ -472,9 +472,7 @@ def read_labs_bridge(bridge_db: str) -> tuple[list[LabResult], list[str]]:
     Opens the bridge READ-ONLY via a URI with the path percent-encoded.
     If the table is missing returns ([], []).
     """
-    abs_path = os.path.abspath(bridge_db)
-    encoded = urllib.parse.quote(abs_path)
-    conn = sqlite3.connect(f"file:{encoded}?mode=ro", uri=True)
+    conn = connect_readonly(bridge_db)
     try:
         tbl = conn.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='lab_results'"
@@ -581,7 +579,7 @@ def cmd_import_bridge(bridge_db: str, labs_db: str) -> int:
 # ---- CLI helpers ----------------------------------------------------------
 
 def _open_ro(db_path: str) -> sqlite3.Connection:
-    return sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    return connect_readonly(db_path)
 
 
 def _query(conn: sqlite3.Connection, sql: str, params=()) -> list[tuple]:

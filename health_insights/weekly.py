@@ -25,6 +25,7 @@ from . import stats as st
 from .bridge_db import _normalize_ts
 from .bp import _readings as bp_readings
 from .units import to_display_weight, weight_unit
+from health_insights.sqlite_ro import connect_readonly
 
 # (config type_code, label, unit). Weight is stored in kg and shown in lb; SpO2 (oxygen_saturation)
 # is stored as a fraction and rendered as a percent.
@@ -46,7 +47,7 @@ DIRECTION_SIGMA = 1.0  # a change must reach this many robust sigmas to be up/do
 
 
 def _open(db_path: str) -> sqlite3.Connection:
-    return sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    return connect_readonly(db_path)
 
 
 def _daily_values(db_path: str, config: dict, type_code: str, chi: ZoneInfo) -> dict[str, float]:

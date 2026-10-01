@@ -38,6 +38,6 @@ The plugin only holds skills. The analysis code is the `health-insights` command
    Ask the user for the profile values; do not choose them for the user.
 
 ## Advanced (optional)
-`integrations.*` (for example `integrations.medlog`), `notify_command` and `narration.url` are hooks for personal tooling that is NOT included with this plugin: a separate `medlog` command line tool, a notification command, and a local OpenAI-compatible model for wording. Everything works without them (a fixed template writes summaries). Do not set them up unless the user says they have those tools.
+`integrations.*` (for example `integrations.medlog`) and `narration.url` are hooks for personal tooling that is NOT included with this plugin: a separate `medlog` command line tool and a local OpenAI-compatible model for wording (its URL must be a loopback address such as `http://127.0.0.1:8080/...`; anything else is refused). Everything works without them (a fixed template writes summaries). Do not set them up unless the user says they have those tools.
 
 Privacy: everything runs locally. Do not upload the database, paste raw values into public places, or point `narration.url` at a cloud model unless the user accepts that.

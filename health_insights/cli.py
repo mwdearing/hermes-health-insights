@@ -26,6 +26,7 @@ import sys
 
 from . import analysis
 from health_insights import __version__, settings
+from health_insights.sqlite_ro import connect_readonly
 
 
 class _DbError(Exception):
@@ -40,14 +41,13 @@ def _db_problem(path: str) -> str | None:
     """Why *path* cannot be opened read-only as a SQLite database, or None when it can."""
     import os
     import sqlite3
-    from urllib.parse import quote
 
     if not os.path.exists(path):
         return "no such file"
     if os.path.isdir(path):
         return "it is a directory"
     try:
-        conn = sqlite3.connect(f"file:{quote(os.path.abspath(path))}?mode=ro", uri=True)
+        conn = connect_readonly(path)
         try:
             conn.execute("SELECT name FROM sqlite_master LIMIT 1").fetchall()
         finally:

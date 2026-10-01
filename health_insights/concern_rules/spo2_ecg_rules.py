@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING
 
 from .. import ecg
 from health_insights import settings
+from health_insights.sqlite_ro import connect_readonly
 
 if TYPE_CHECKING:
     from ..concerns import Finding
@@ -51,7 +52,7 @@ def spo2_ecg_findings(
 
     # --- SpO2 ---
     try:
-        con = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+        con = connect_readonly(db_path)
     except sqlite3.OperationalError:
         pass
     else:
@@ -158,7 +159,7 @@ def spo2_ecg_findings(
 
     # --- ECG ---
     try:
-        con = sqlite3.connect(f"file:{ecg_db}?mode=ro", uri=True)
+        con = connect_readonly(ecg_db)
     except (sqlite3.OperationalError, OSError):
         pass
     else:

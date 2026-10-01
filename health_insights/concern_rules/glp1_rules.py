@@ -17,6 +17,7 @@ from typing import Optional
 
 from .. import modules
 from health_insights import settings
+from health_insights.sqlite_ro import connect_readonly
 
 MODULE_ID = "glp1"
 _TZ = settings.timezone()
@@ -78,7 +79,7 @@ def _opts() -> dict:
 
 def _rows(db_path: str, code: str) -> list[tuple[datetime, float, str]]:
     try:
-        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+        conn = connect_readonly(db_path)
         cur = conn.execute("SELECT start_time, value, unit FROM samples WHERE type_code = ? AND value IS NOT NULL ORDER BY start_time", (code,))
         raw = cur.fetchall()
         conn.close()
@@ -316,7 +317,7 @@ def check_lean_share(db_path: str, ref: Date, opts: dict) -> list:
 
 def _strength_sessions(db_path: str, ref: Date) -> Optional[int]:
     try:
-        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+        conn = connect_readonly(db_path)
         rows = conn.execute("SELECT workout_type, end_time FROM workouts").fetchall()
         conn.close()
     except sqlite3.Error:

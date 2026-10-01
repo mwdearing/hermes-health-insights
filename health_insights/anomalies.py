@@ -53,13 +53,14 @@ from typing import Optional
 from . import stats as st
 from .bridge_db import CHICAGO, _normalize_ts
 from health_insights import settings
+from health_insights.sqlite_ro import connect_readonly
 
 MIN_HISTORY_DAYS = 14  # below this, a metric is "insufficient" and never flagged
 MIN_BASELINE_DAYS = 14  # in-window days needed for robust_z / trend (same rule as morning_digest)
 
 
 def _open(db_path: str) -> sqlite3.Connection:
-    return sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    return connect_readonly(db_path)
 
 
 def _daily_means(conn: sqlite3.Connection, type_code: str, chi: ZoneInfo) -> dict[str, list[float]]:

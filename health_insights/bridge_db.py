@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from typing import Optional
 from health_insights import settings
+from health_insights.sqlite_ro import connect_readonly
 
 # Apple Health days run on the user's local calendar. Every day boundary (daily
 # buckets, "yesterday", baselines, digests) uses the configured timezone (see
@@ -83,7 +84,7 @@ def _date_key(ts: Optional[str]) -> Optional[str]:
 
 def open_readonly(db_path: str) -> sqlite3.Connection:
     """Open a bridge SQLite DB read-only."""
-    return sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    return connect_readonly(db_path)
 
 
 def list_type_codes(conn: sqlite3.Connection) -> list[str]:

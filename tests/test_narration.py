@@ -152,3 +152,39 @@ def test_narrate_sends_only_finding_fields_never_extra_data(fake_model):
 def test_narrate_never_raises_on_empty_findings(fake_model):
     fake_model(reply_text="Nothing stood out. Informational, not medical advice.")
     assert narration.narrate([]) != ""
+
+
+# --- loopback enforcement -------------------------------------------------------------------------------------
+
+import pytest  # noqa: E402
+
+
+@pytest.mark.parametrize("url", [
+    "http://127.0.0.1:8080/v1/chat/completions", "http://localhost:8080/v1", "http://[::1]:8080/v1", "http://127.1.2.3/v1",
+])
+def test_loopback_urls_are_accepted(url):
+    narration._require_loopback(url)
+
+
+@pytest.mark.parametrize("url", [
+    "https://api.example.com/v1", "http://192.168.1.20:8080/v1", "http://10.0.0.5/v1", "http://127.0.0.1.evil.example/v1",
+    "http://127.0.0.1@evil.example/v1", "http://localhost.evil.example/v1", "ftp://127.0.0.1/v1", "file:///etc/passwd", "127.0.0.1:8080", "",
+])
+def test_non_loopback_urls_are_refused_with_a_clear_error(url):
+    with pytest.raises(ValueError, match="loopback"):
+        narration._require_loopback(url)
+
+
+def test_narrate_with_a_remote_url_never_makes_a_request_and_falls_back(monkeypatch):
+    monkeypatch.setattr(narration, "LOCAL_MODEL_URL", "https://api.example.com/v1")
+    monkeypatch.setattr(narration.urllib.request, "urlopen", lambda *a, **k: pytest.fail("network used"))
+    monkeypatch.setattr(narration, "_OPENER", type("O", (), {"open": lambda *a, **k: pytest.fail("network used")})())
+    assert "Nothing stood out" in narration.narrate([])
+
+
+def test_redirect_to_another_host_is_not_followed():
+    import urllib.request
+    handler = narration._NoRedirect()
+    req = urllib.request.Request("http://127.0.0.1:1/v1")
+    with pytest.raises(urllib.error.HTTPError):
+        handler.redirect_request(req, None, 302, "Found", {}, "http://evil.example/steal")

@@ -165,9 +165,22 @@ def medlog_path() -> str | None:
     return _config().get("medlog_path") or None
 
 
-def notify_command() -> str | None:
-    """Executable called as `cmd TITLE MESSAGE` for urgent findings. None = no push."""
-    return os.environ.get("HEALTH_INSIGHTS_NOTIFY") or _config().get("notify_command") or None
+def _bounded_int(value, default: int, maximum: int) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        return default
+    return min(value, maximum)
+
+
+def injection_window() -> dict:
+    """The `injection_window:` block: which medlog registry id to watch, how many baseline days, how many window days."""
+    raw = _config().get("injection_window")
+    raw = raw if isinstance(raw, dict) else {}
+    med = raw.get("medication_id")
+    return {
+        "medication_id": med.strip() if isinstance(med, str) and med.strip() else None,
+        "baseline_days": _bounded_int(raw.get("baseline_days"), 28, 365),
+        "window_days": _bounded_int(raw.get("window_days"), 3, 7),
+    }
 
 
 def narration_url() -> str | None:

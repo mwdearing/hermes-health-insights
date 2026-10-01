@@ -18,6 +18,7 @@ from .concern_rules import nutrition_rules
 from .concern_rules import spo2_ecg_rules
 from .concern_rules import vitals_rules
 from .concern_rules import workout_rules
+from health_insights.sqlite_ro import connect_readonly
 
 
 @dataclass(frozen=True)
@@ -89,7 +90,7 @@ def _open_problem(db_path: str) -> Optional[str]:
         path = Path(db_path)
         if not path.is_file():
             return f"database not found at {db_path}"
-        conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+        conn = connect_readonly(path)
         try:
             conn.execute("SELECT name FROM sqlite_master LIMIT 1").fetchall()
         finally:

@@ -84,25 +84,23 @@ def test_bridge_db_env_config_or_none(monkeypatch, tmp_path):
 
 
 def test_integrations_are_off_by_default(monkeypatch, tmp_path):
-    for var in ("HEALTH_INSIGHTS_MEDLOG", "HEALTH_INSIGHTS_NOTIFY", "HEALTH_INSIGHTS_NARRATION_URL", "MEDLOG_BIN"):
+    for var in ("HEALTH_INSIGHTS_MEDLOG", "HEALTH_INSIGHTS_NARRATION_URL", "MEDLOG_BIN"):
         monkeypatch.delenv(var, raising=False)
     monkeypatch.setenv("HEALTH_INSIGHTS_CONFIG", str(tmp_path / "none.yaml"))
     settings.reset()
     assert settings.medlog_enabled() is False
-    assert settings.notify_command() is None
     assert settings.narration_url() is None
     assert settings.medlog_bin() == "medlog"
 
 
 def test_integrations_from_config_and_env(monkeypatch, tmp_path):
     cfg = tmp_path / "c.yaml"
-    cfg.write_text("integrations: {medlog: true}\nnotify_command: /usr/bin/x\nnarration: {url: 'http://h/v1', model: m}\nmedlog_path: /p\n")
+    cfg.write_text("integrations: {medlog: true}\nnarration: {url: 'http://h/v1', model: m}\nmedlog_path: /p\n")
     monkeypatch.setenv("HEALTH_INSIGHTS_CONFIG", str(cfg))
-    for var in ("HEALTH_INSIGHTS_MEDLOG", "HEALTH_INSIGHTS_NOTIFY", "HEALTH_INSIGHTS_NARRATION_URL"):
+    for var in ("HEALTH_INSIGHTS_MEDLOG", "HEALTH_INSIGHTS_NARRATION_URL"):
         monkeypatch.delenv(var, raising=False)
     settings.reset()
     assert settings.medlog_enabled() is True
-    assert settings.notify_command() == "/usr/bin/x"
     assert settings.narration_url() == "http://h/v1"
     assert settings.narration_model() == "m"
     assert settings.medlog_path() == "/p"

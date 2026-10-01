@@ -18,6 +18,7 @@ import yaml
 from ..bridge_db import _normalize_ts
 from ..weekly import METRIC_LABELS
 from health_insights import settings
+from health_insights.sqlite_ro import connect_readonly
 
 
 # ---------------------------------------------------------------------------
@@ -68,7 +69,7 @@ def data_gap_findings(
     # Gather distinct Chicago calendar dates per type_code
     try:
         import sqlite3
-        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+        conn = connect_readonly(db_path)
     except Exception:
         return []
 
@@ -172,7 +173,7 @@ def store_staleness_findings(db_path: str, ref_date) -> list["Finding"]:
     _ref = Date.fromisoformat(ref_date) if isinstance(ref_date, str) else ref_date
     zone = ZoneInfo(settings.timezone_name())
 
-    conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    conn = connect_readonly(db_path)
     try:
         tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         if "samples" not in tables:

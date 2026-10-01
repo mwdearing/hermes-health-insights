@@ -4,13 +4,15 @@ Code (concerns.py and concern_rules/) decides WHAT the findings are. This
 module only asks the LOCAL model to reword them into a short, calm summary in
 house style. Nothing here ever leaves the host: the request goes to the
 router's loopback endpoint (127.0.0.1:8080), the same local model the bot
-runs on, never a cloud provider.
+runs on, never a cloud provider. This is enforced, not just documented: a
+narration URL whose host is not a loopback address (127.0.0.0/8, ::1 or
+"localhost") is refused before any request is made, and redirects are not
+followed, so findings can never be sent to another machine from here.
 
 Only Finding.to_dict() fields are ever sent to the model: id, level, title,
 evidence, source, advice. Evidence text can include real numbers (a reading,
 a lab value) because it is the user's own data going to their own LOCAL model on their
-own host; point narration at a cloud endpoint only if you accept that. It is
-never written anywhere else from here. With no narration URL configured the
+own host. It is never written anywhere else from here. With no narration URL configured the
 deterministic summary is used and nothing leaves the process.
 
 If the model call fails for any reason (unreachable, timeout, malformed
@@ -19,8 +21,10 @@ deterministic_summary(), so nightly jobs never depend on the model being up.
 """
 from __future__ import annotations
 
+import ipaddress
 import json
 import urllib.error
+import urllib.parse
 import urllib.request
 from typing import Sequence
 
@@ -65,10 +69,37 @@ def deterministic_summary(findings: Sequence, overall_level: int | None = None) 
     return lead + " " + " ".join(lines) + " Informational, not medical advice."
 
 
+def _require_loopback(url: str) -> None:
+    """Raise ValueError unless *url* is http(s) with a loopback host (127.0.0.0/8, ::1 or localhost)."""
+    parts = urllib.parse.urlsplit(url)
+    host = parts.hostname
+    if parts.scheme not in ("http", "https") or not host:
+        raise ValueError("narration URL must be an http(s) URL on a loopback host; refusing")
+    if host.lower() == "localhost":
+        return
+    try:
+        loopback = ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        loopback = False
+    if not loopback:
+        raise ValueError(f"narration URL host {host!r} is not a loopback address; refusing to send findings off this host")
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """A loopback endpoint must not be able to bounce the request to another host."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise urllib.error.HTTPError(req.full_url, code, "redirects are not followed for narration", headers, fp)
+
+
+_OPENER = urllib.request.build_opener(_NoRedirect)
+
+
 def _call_local_model(findings_json: str, timeout_s: float) -> str:
     """Raises on any failure; callers must catch and fall back."""
     if not LOCAL_MODEL_URL:
         raise ValueError("no narration model configured")
+    _require_loopback(LOCAL_MODEL_URL)
     payload = json.dumps({
         "model": LOCAL_MODEL_NAME,
         "messages": [
@@ -82,7 +113,7 @@ def _call_local_model(findings_json: str, timeout_s: float) -> str:
         LOCAL_MODEL_URL, data=payload, method="POST",
         headers={"Content-Type": "application/json"},
     )
-    with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+    with _OPENER.open(req, timeout=timeout_s) as resp:
         body = json.loads(resp.read().decode("utf-8"))
     text = body["choices"][0]["message"]["content"].strip()
     if not text:

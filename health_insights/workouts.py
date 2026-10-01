@@ -16,13 +16,14 @@ import sqlite3
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from health_insights import settings
+from health_insights.sqlite_ro import connect_readonly
 
 CHI = settings.timezone()
 
 
 def _open(db_path: str) -> sqlite3.Connection:
     """Open a merged-history DB for read-only access."""
-    return sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    return connect_readonly(db_path)
 
 
 def _parse_ts(ts: str) -> datetime:
