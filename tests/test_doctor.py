@@ -16,8 +16,11 @@ SCHEMA = (
 
 
 def _iso(days_ago, hour=12):
-    d = datetime.now(timezone.utc) - timedelta(days=days_ago)
-    return d.replace(hour=hour, minute=0, second=0, microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
+    # The doctor counts days in the configured timezone, so build the stamps from that zone's calendar date. Using the
+    # UTC date made "today" a future day (and the count 29, not 30) between 19:00 and midnight Chicago time.
+    local_day = datetime.now(settings.timezone()).date() - timedelta(days=days_ago)
+    local = datetime.combine(local_day, datetime.min.time()).replace(hour=hour, tzinfo=settings.timezone())
+    return local.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def make_db(path, days_by_type):
