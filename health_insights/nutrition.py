@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional
 from zoneinfo import ZoneInfo
 from health_insights import settings
 from health_insights.sqlite_ro import connect_readonly
+from health_insights import nutrition_intake
 
 CHI = settings.timezone()
 
@@ -460,6 +461,17 @@ def _labs_check(dri: dict, labs_db: Optional[str]) -> str:
     return "Labs: " + "; ".join(parts)
 
 
+def _intake_sections(db_path: str, dri_cfg: dict, start: date, end: date) -> tuple[list[dict], dict[str, dict]]:
+    """Compounds and UL findings from the intake context; empty when the DB has no intake data."""
+    conn = _open_ro(db_path)
+    try:
+        return nutrition_intake.intake_sections(conn, dri_cfg, start, end, CHI)
+    except sqlite3.OperationalError:
+        return [], {}
+    finally:
+        conn.close()
+
+
 def report(
     db_path: str,
     dri: str,
@@ -489,17 +501,17 @@ def report(
 
     # Check for empty db
     if days_logged == 0:
-        return [
-            f"No food log entries for {start.isoformat()} to {end.isoformat()} ({settings.tz_label()}).",
-            "Informational, not medical advice.",
-        ]
+        short = [f"No food log entries for {start.isoformat()} to {end.isoformat()} ({settings.tz_label()}).",]
+        short.extend(nutrition_intake.text_lines(*_intake_sections(db_path, dri_cfg, start, end), dri_cfg, start, end))
+        short.append("Informational, not medical advice.")
+        return short
 
     # Check for too few days
     if days_logged < min_logged:
-        return [
-            f"Not enough food-log days ({days_logged} of {days}) for {start.isoformat()} to {end.isoformat()} ({settings.tz_label()}).",
-            "Informational, not medical advice.",
-        ]
+        short = [f"Not enough food-log days ({days_logged} of {days}) for {start.isoformat()} to {end.isoformat()} ({settings.tz_label()}).",]
+        short.extend(nutrition_intake.text_lines(*_intake_sections(db_path, dri_cfg, start, end), dri_cfg, start, end))
+        short.append("Informational, not medical advice.")
+        return short
 
     # Compute window averages
     # Unknown is not zero: average each nutrient over the logged days that have a value for it.
@@ -604,6 +616,10 @@ def report(
     labs_line = _labs_check(dri_cfg, labs_db)
     lines.extend(_wrap("Labs: ", [x.strip() for x in labs_line[len("Labs: "):].split(";")], sep="; ") if labs_line.startswith("Labs: ") else [labs_line])
 
+    # Intake context: compounds and upper limits (absent without intake data)
+    compounds, limits = _intake_sections(db_path, dri_cfg, start, end)
+    lines.extend(nutrition_intake.text_lines(compounds, limits, dri_cfg, start, end))
+
     # Footer
     lines.append("Informational, not medical advice.")
 
@@ -637,6 +653,7 @@ def report_json(
     days_adequate = days_logged - days_partial
 
     if days_logged == 0:
+        compounds_err, limits_err = _intake_sections(db_path, dri_cfg, start, end)
         return {
             "start": start.isoformat(),
             "end": end.isoformat(),
@@ -644,6 +661,8 @@ def report_json(
             "days_partial": 0,
             "days_adequate": 0,
             "error": "no food log entries",
+            "compounds": compounds_err,
+            "upper_limits": limits_err,
         }
 
     # Compute window averages
@@ -757,12 +776,15 @@ def report_json(
                 else:
                     labs_info.append(f"{label}: not on file")
 
+    compounds, limits = _intake_sections(db_path, dri_cfg, start, end)
     return {
         "start": start.isoformat(),
         "end": end.isoformat(),
         "days_logged": days_logged,
         "days_partial": days_partial,
         "days_adequate": days_adequate,
+        "compounds": compounds,
+        "upper_limits": limits,
         "dri_table": _dri_table(dri, dri_cfg),
         "nutrients": nutrients,
         "supplement_candidates": candidates,

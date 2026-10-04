@@ -109,6 +109,25 @@ def _metric_rows(path: str, today) -> dict:
     return {"metrics": out, "newest_any": _local_day(newest_any).isoformat() if newest_any else None}
 
 
+def _intake_context(path: str) -> dict:
+    """Report optional intake readiness using only aggregate read-only queries."""
+    conn = connect_readonly(path)
+    try:
+        tables = {r[0] for r in conn.execute("select name from sqlite_master where type='table'")}
+        if not {"intake_producers", "intake_context_tokens", "intake_state"} <= tables:
+            return {"schema": "absent"}
+        producers = conn.execute("select count(*) from intake_producers where revoked_at is null").fetchone()[0]
+        tokens = conn.execute("select count(*) from intake_context_tokens where revoked_at is null").fetchone()[0]
+        intakes = conn.execute("select count(*) from intake_state where deleted = 0").fetchone()[0]
+        newest = conn.execute("select max(updated_at) from intake_state").fetchone()[0]
+        return {
+            "schema": "ready", "producers_active": producers, "tokens_active": tokens,
+            "intakes_active": intakes, "newest_intake_date": _local_day(newest).isoformat() if newest else None,
+        }
+    finally:
+        conn.close()
+
+
 def build_report(db: str | None = None, stale_days: int | None = None, today=None) -> dict:
     stale = stale_days if stale_days is not None else settings.stale_days()
     today = today or datetime.now(settings.timezone()).date()
@@ -134,6 +153,7 @@ def build_report(db: str | None = None, stale_days: int | None = None, today=Non
         if info.get("problem"):
             report["errors"].append(f"{path}: {info['problem']}")
         else:
+            report["intake_context"] = _intake_context(path)
             data = _metric_rows(path, today)
             report["metrics"] = data["metrics"]
             newest = data["newest_any"]
@@ -166,6 +186,14 @@ def run(db: str | None = None, stale_days: int | None = None, as_json: bool = Fa
     for key in ("exists", "bytes", "readable", "opened_read_only", "has_samples_table", "has_sleep_sessions_table"):
         if key in bridge:
             print(f"  {key}: {bridge[key]}")
+    intake = report.get("intake_context")
+    if intake:
+        if intake["schema"] == "ready":
+            print(f"intake context: ready, {intake['producers_active']} active producer(s), "
+                  f"{intake['tokens_active']} active token(s), {intake['intakes_active']} intake(s), "
+                  f"newest {intake['newest_intake_date'] or 'never'}")
+        else:
+            print("intake context: not set up (receiver older than migration 013)")
     hist = report["history_db"]
     print(f"history db: {hist['path']} ({'found' if hist['exists'] else 'not present; optional'})")
     for name, m in report.get("metrics", {}).items():

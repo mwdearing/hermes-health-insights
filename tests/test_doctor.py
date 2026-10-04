@@ -171,3 +171,92 @@ def test_coverage_refuses_a_zero_byte_database(tmp_path, capsys):
     code = cli.main(["coverage", "--db", str(db)])
     assert code == 2
     assert "0-byte" in capsys.readouterr().err
+
+
+INTAKE_SCHEMA = (
+    "create table intake_producers (producer_id text, display_label text, revoked_at text);"
+    "create table intake_context_tokens (token_prefix text, label text, revoked_at text);"
+    "create table intake_state (intake_id text, writer_bundle_id text, deleted integer, updated_at text);"
+)
+
+
+def make_intake(db, populated=True):
+    with sqlite3.connect(db) as con:
+        con.executescript(INTAKE_SCHEMA)
+        if populated:
+            con.executemany("insert into intake_producers values (?,?,?)", [
+                ("synthetic-producer-a", "Label Alpha", None),
+                ("synthetic-producer-b", "Label Beta", "2026-10-01T12:00:00Z"),
+            ])
+            con.executemany("insert into intake_context_tokens values (?,?,?)", [
+                ("hri_aaaa", "tok one", None), ("hri_bbbb", "tok two", None),
+                ("hri_cccc", "tok three", "2026-10-01T12:00:00Z"),
+            ])
+            con.executemany("insert into intake_state values (?,?,?,?)", [
+                ("intake-1", "dev.example.a", 0, "2026-10-01T12:00:00Z"),
+                ("intake-2", "dev.example.a", 0, "2026-10-01T13:00:00Z"),
+                ("intake-3", "dev.example.a", 0, "2026-10-01T14:00:00Z"),
+                ("intake-4", "dev.example.a", 1, "2026-10-03T02:00:00Z"),
+            ])
+
+
+@pytest.mark.parametrize("missing", [None, "intake_producers", "intake_context_tokens", "intake_state"])
+def test_intake_schema_absent(tmp_path, capsys, missing):
+    db = tmp_path / "b.sqlite"
+    make_db(db, FULL)
+    if missing:
+        make_intake(db)
+        with sqlite3.connect(db) as con:
+            con.execute(f"drop table {missing}")
+    code, out = doctor(capsys, "--db", str(db), "--json")
+    report = json.loads(out.out)
+    assert code == 0
+    assert report["intake_context"] == {"schema": "absent"}
+    assert report["errors"] == report["warnings"] == []
+
+
+def test_intake_ready_counts_and_local_newest_date(tmp_path, capsys, monkeypatch):
+    monkeypatch.setenv("HEALTH_INSIGHTS_TZ", "America/Chicago")
+    settings.reset()
+    db = tmp_path / "b.sqlite"
+    make_db(db, FULL)
+    make_intake(db)
+    before = db.read_bytes()
+    code, out = doctor(capsys, "--db", str(db), "--json")
+    assert code == 0
+    assert json.loads(out.out)["intake_context"] == {
+        "schema": "ready", "producers_active": 1, "tokens_active": 2,
+        "intakes_active": 3, "newest_intake_date": "2026-10-02",
+    }
+    assert db.read_bytes() == before
+    for private in ("synthetic-producer", "Label Alpha", "tok one", "hri_", "intake-1", "dev.example"):
+        assert private not in out.out
+
+
+@pytest.mark.parametrize("days,expected_code", [(FULL, 0), ({c: range(10, 40) for c in FULL}, 1), ({}, 2)])
+def test_intake_text_counts_only_and_exit_unchanged(tmp_path, capsys, monkeypatch, days, expected_code):
+    monkeypatch.setenv("HEALTH_INSIGHTS_TZ", "America/Chicago")
+    settings.reset()
+    db = tmp_path / "b.sqlite"
+    make_db(db, days)
+    plain_code, plain = doctor(capsys, "--db", str(db))
+    assert plain_code == expected_code
+    assert "intake context: not set up (receiver older than migration 013)" in plain.out
+    make_intake(db)
+    code, out = doctor(capsys, "--db", str(db))
+    assert code == plain_code
+    assert "intake context: ready, 1 active producer(s), 2 active token(s), 3 intake(s), newest 2026-10-02" in out.out
+    for private in ("synthetic-producer", "Label Alpha", "Label Beta", "tok one", "hri_", "intake-1", "dev.example"):
+        assert private not in out.out
+
+
+def test_intake_ready_empty_tables(tmp_path, capsys):
+    db = tmp_path / "b.sqlite"
+    make_db(db, FULL)
+    make_intake(db, populated=False)
+    code, out = doctor(capsys, "--db", str(db), "--json")
+    assert code == 0
+    assert json.loads(out.out)["intake_context"] == {
+        "schema": "ready", "producers_active": 0, "tokens_active": 0,
+        "intakes_active": 0, "newest_intake_date": None,
+    }

@@ -206,6 +206,13 @@ def _parse_args(argv):
     p_nut.add_argument("--labs", help="Path to labs.sqlite for cross-check")
     p_nut.add_argument("--json", action="store_true", help="Print JSON document")
 
+    # compounds: factual compound exposure summary
+    p_cmp = sub.add_parser("compounds", help="Factual compound exposure summary")
+    p_cmp.add_argument("--db", help=_DB_HELP)
+    p_cmp.add_argument("--from", dest="from_date", help="Start local day (YYYY-MM-DD)")
+    p_cmp.add_argument("--to", dest="to_date", help="End local day (YYYY-MM-DD)")
+    p_cmp.add_argument("--json", action="store_true", help="Print JSON document")
+
     # concerns: health concern findings
     p_con = sub.add_parser("concerns", help="Health concern findings")
     p_con.add_argument("--db", help=_DB_HELP)
@@ -517,6 +524,62 @@ def _concerns_dispatch(args) -> int:
     return 0
 
 
+def _compounds_dispatch(args) -> int:
+    """Route `compounds` to the evidence module."""
+    from . import evidence
+    from .intake_reader import read_effective_components
+
+    db = _receiver_db(args.db)
+    conn = connect_readonly(db)
+
+    try:
+        components = read_effective_components(conn)
+    except Exception:
+        components = []
+    finally:
+        conn.close()
+
+    rows = evidence.compound_exposure_summary(
+        components,
+        start=getattr(args, "from_date", None),
+        end=getattr(args, "to_date", None),
+    )
+
+    if args.json:
+        doc = {"compounds": []}
+        for r in rows:
+            doc["compounds"].append({
+                "substance": r.substance,
+                "form": r.form,
+                "unit": r.unit,
+                "total": str(r.total) if r.total is not None else None,
+                "known_count": r.known_count,
+                "unknown_count": r.unknown_count,
+                "first_day": r.first_day,
+                "last_day": r.last_day,
+                "days": r.days,
+                "sources": r.sources,
+            })
+        print(json.dumps(doc, indent=2))
+    else:
+        if not rows:
+            print("No compounds logged")
+            return 0
+        # Print a small aligned table
+        header = f"{'Substance':<20} {'Form':<25} {'Unit':<8} {'Total':>10} {'Known':>7} {'Unknown':>9} {'Days':>6} {'First':>11} {'Last':>11} {'Sources'}"
+        print(header)
+        print("-" * len(header))
+        for r in rows:
+            total_str = str(r.total) if r.total is not None else "N/A"
+            sources_str = ", ".join(r.sources)
+            print(
+                f"{r.substance:<20} {str(r.form or ''):<25} {str(r.unit or ''):<8} "
+                f"{total_str:>10} {r.known_count:>7} {r.unknown_count:>9} "
+                f"{r.days:>6} {r.first_day:>11} {r.last_day:>11} {sources_str}"
+            )
+    return 0
+
+
 def main(argv=None) -> int:
     args = _parse_args(sys.argv[1:] if argv is None else argv)
     try:
@@ -559,6 +622,8 @@ def _run(args) -> int:
         return _workouts_dispatch(args)
     if args.command == "concerns":
         return _concerns_dispatch(args)
+    if args.command == "compounds":
+        return _compounds_dispatch(args)
     return 1
 
 
