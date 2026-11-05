@@ -54,7 +54,7 @@ Check it with `health-insights doctor`. If the database cannot be opened, the to
 
 
 ## Troubleshooting
-Run `health-insights doctor` first. It prints where the configuration came from, the receiver database it resolved (found, not empty, readable, opened read-only) and, for each metric the skills use, the newest sample date and how many of the last 30 days have data. Exit codes: 0 OK, 1 warning (newest data older than `--stale-days`, default 3, or `stale_days` in the config; or a metric with no data in 30 days), 2 error (database not configured, missing, a 0-byte file or not a bridge database); `--json` for machines. A wrong or empty path is an error, never an empty report: fix `bridge_db` instead of looking for another database.
+Run `health-insights doctor` first. It prints where the configuration came from, the receiver database it resolved (found, not empty, readable, opened read-only) and, for each metric the skills use, the newest sample date and how many of the last 30 days have data. When the database also has the intake context tables it prints one more line of counts only — `intake context: ready, N active producer(s), M active token(s), K intake(s), newest <date or never>` — and when it does not, `intake context: not set up (receiver older than migration 013)`; neither line changes the exit code. Exit codes: 0 OK, 1 warning (newest data older than `--stale-days`, default 3, or `stale_days` in the config; or a metric with no data in 30 days), 2 error (database not configured, missing, a 0-byte file or not a bridge database); `--json` for machines. A wrong or empty path is an error, never an empty report: fix `bridge_db` instead of looking for another database.
 
 ## Uninstall
 ```bash
@@ -89,3 +89,13 @@ pip install -e . pytest
 pytest
 ```
 Tests use synthetic data only. Licensed Apache-2.0.
+
+## Release notes
+
+### Doctor: intake-context readiness (1.48.0)
+
+`health-insights doctor` now reports whether the database it resolved carries the optional intake context. It asks
+for no new data: aggregate counts only, read through a read-only connection. With the intake tables present it prints
+`intake context: ready, N active producer(s), M active token(s), K intake(s), newest <date or never>`; without them,
+`intake context: not set up (receiver older than migration 013)`. Neither line adds an error or a warning, so the
+exit contract is unchanged: 0 OK, 1 warning, 2 error. A database without the intake tables is supported, not broken.

@@ -76,7 +76,8 @@ def _add_db_option(parser, required_help=_DB_HELP):
     parser.add_argument("--db", help=required_help)
 
 
-def _parse_args(argv):
+def build_parser():
+    """Build the CLI parser (kept apart from _parse_args so tests can pin its contract)."""
     parser = argparse.ArgumentParser(
         prog="health-insights",
         description="Health monitoring analysis (stdlib).",
@@ -118,7 +119,7 @@ def _parse_args(argv):
     _add_db_option(p_bp, "Same as the positional path")
     p_bp.add_argument("--date", help="Local day (YYYY-MM-DD); defaults to today in your configured time zone")
 
-    p_doc = sub.add_parser("doctor", help="Check the setup: config, database paths, data freshness (exit 0 ok, 1 warning, 2 error)")
+    p_doc = sub.add_parser("doctor", help="Check the setup: config, database paths, data freshness, intake-context readiness (exit 0 ok, 1 warning, 2 error)")
     p_doc.add_argument("--db", help=_DB_HELP)
     p_doc.add_argument("--stale-days", type=int, help="Warn when the newest data is older than this many days (default 3, or stale_days in the config)")
     p_doc.add_argument("--json", action="store_true", help="Print JSON document")
@@ -231,6 +232,11 @@ def _parse_args(argv):
     p_dl.add_argument("--db", help=_DB_HELP)
     p_dl.add_argument("--date", required=True, help="Day (YYYY-MM-DD)")
 
+    return parser
+
+
+def _parse_args(argv):
+    parser = build_parser()
     args = parser.parse_args(argv)
     if args.command in ("daily", "baseline"):
         # `<cmd> <db_path> <type_code>` (original form) or `<cmd> <type_code>` (database resolved).
